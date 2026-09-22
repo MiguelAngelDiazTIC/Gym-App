@@ -27,7 +27,7 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
         color: color.text,
         padding: '11px 14px',
         borderRadius: radius.md,
-        fontSize: 15,
+        fontSize: 16, // 16px minimum — smaller triggers iOS Safari's zoom-on-focus
         fontFamily: font.ui,
         fontWeight: 500,
         outline: 'none',

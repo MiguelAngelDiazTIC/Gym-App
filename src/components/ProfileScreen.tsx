@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { motion } from 'motion/react'
 import { Plus, Pencil, Trash2, Check, X, Dumbbell } from 'lucide-react'
 import { useLocalStorage } from '../hooks/useStorage'
+import { generateId } from '../utils/id'
 import type { Profile } from '../types'
 import { color, font, radius, springDefault, springSnappy } from '../styles/theme'
 import { Input } from '../components/ui/Field'
@@ -23,7 +24,7 @@ export default function ProfileScreen({ onSelect }: Props) {
   function createProfile() {
     if (!newName.trim()) return
     const profile: Profile = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       name: newName.trim(),
     }
     setProfiles(prev => [...prev, profile])
@@ -64,7 +65,7 @@ export default function ProfileScreen({ onSelect }: Props) {
     reader.onload = (e) => {
       const base64 = e.target?.result as string
       const profile: Profile = {
-        id: crypto.randomUUID(),
+        id: generateId(),
         name: newName.trim() || 'Perfil',
         photo: base64,
       }
@@ -77,7 +78,10 @@ export default function ProfileScreen({ onSelect }: Props) {
 
   return (
     <div style={{
-      minHeight: '100dvh',
+      height: '100dvh',
+      overflowY: 'auto',
+      WebkitOverflowScrolling: 'touch',
+      overscrollBehavior: 'contain',
       background: color.bg,
       backgroundImage: `radial-gradient(circle at 50% 0%, rgba(255,45,85,0.12), transparent 55%)`,
       display: 'flex',
@@ -134,7 +138,8 @@ export default function ProfileScreen({ onSelect }: Props) {
                     width: 84, height: 84, borderRadius: radius.lg,
                     background: color.surface,
                     border: `1px solid ${color.border}`,
-                    overflow: 'hidden', cursor: 'pointer',
+                    overflow: 'hidden', cursor: 'pointer', touchAction: 'manipulation',
+                    userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                   {profile.photo
@@ -148,7 +153,7 @@ export default function ProfileScreen({ onSelect }: Props) {
                   onChange={e => setEditName(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && saveEdit(profile.id)}
                   autoFocus
-                  style={{ width: 84, textAlign: 'center', padding: '6px 8px', fontSize: 13 }}
+                  style={{ width: 96, textAlign: 'center', padding: '6px 8px' }}
                 />
                 <div style={{ display: 'flex', gap: 6 }}>
                   <IconButton onClick={() => saveEdit(profile.id)} style={{ color: color.success }}>
@@ -169,7 +174,8 @@ export default function ProfileScreen({ onSelect }: Props) {
                     width: 84, height: 84, borderRadius: radius.lg,
                     background: color.surface,
                     border: `1px solid ${color.border}`,
-                    overflow: 'hidden', cursor: 'pointer',
+                    overflow: 'hidden', cursor: 'pointer', touchAction: 'manipulation',
+                    userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                   {profile.photo
@@ -207,7 +213,8 @@ export default function ProfileScreen({ onSelect }: Props) {
                 width: 84, height: 84, borderRadius: radius.lg,
                 background: 'transparent',
                 border: `1.5px dashed ${color.border}`,
-                cursor: 'pointer',
+                cursor: 'pointer', touchAction: 'manipulation',
+                userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
               <Plus size={24} color={color.textTertiary} />
@@ -230,7 +237,8 @@ export default function ProfileScreen({ onSelect }: Props) {
               style={{
                 width: 84, height: 84, borderRadius: radius.lg,
                 background: color.surface, border: `1.5px dashed ${color.border}`,
-                cursor: 'pointer',
+                cursor: 'pointer', touchAction: 'manipulation',
+                userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
               <span style={{ color: color.textTertiary, fontSize: 12, fontFamily: font.ui }}>+ Foto</span>
@@ -243,7 +251,7 @@ export default function ProfileScreen({ onSelect }: Props) {
               onKeyDown={e => e.key === 'Enter' && createProfile()}
               placeholder="Nombre"
               autoFocus
-              style={{ width: 84, textAlign: 'center', padding: '6px 8px', fontSize: 13 }}
+              style={{ width: 96, textAlign: 'center', padding: '6px 8px' }}
             />
             <div style={{ display: 'flex', gap: 6 }}>
               <IconButton onClick={createProfile} style={{ color: color.success }}>

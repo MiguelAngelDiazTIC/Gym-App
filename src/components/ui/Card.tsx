@@ -24,6 +24,12 @@ export function Card({ children, style, onClick, active }: Props) {
         borderRadius: radius.lg,
         boxShadow: shadow.card,
         cursor: onClick ? 'pointer' : undefined,
+        ...(onClick && {
+          touchAction: 'manipulation',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          WebkitTouchCallout: 'none',
+        }),
         ...style,
       }}>
       {children}

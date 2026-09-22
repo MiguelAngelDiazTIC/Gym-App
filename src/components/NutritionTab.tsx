@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Plus, X, Check, ChevronLeft, Trash2, ChevronRight, Flame } from 'lucide-react'
 import { useLocalStorage } from '../hooks/useStorage'
+import { generateId } from '../utils/id'
 import type { NutritionDay, Meal, MacroEntry } from '../types'
 import { color, font, springDefault } from '../styles/theme'
 import { Card, SectionLabel, ScreenTitle } from './ui/Card'
@@ -48,11 +49,11 @@ export default function NutritionTab({ profileId }: Props) {
       return
     }
     const day: NutritionDay = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       profileId,
       date: today,
       meals: MEAL_ORDER.map(type => ({
-        id: crypto.randomUUID(),
+        id: generateId(),
         type,
         items: [],
       })),
@@ -213,7 +214,8 @@ export default function NutritionTab({ profileId }: Props) {
                 style={{
                   padding: '12px 16px',
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  cursor: 'pointer',
+                  cursor: 'pointer', touchAction: 'manipulation',
+                  userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none',
                 }}>
                 <span style={{ fontFamily: font.ui, fontSize: 15, fontWeight: 700, color: color.text, letterSpacing: -0.2 }}>
                   {MEAL_LABELS[mealType]}
@@ -275,6 +277,7 @@ export default function NutritionTab({ profileId }: Props) {
                                 <Label>{field.label}</Label>
                                 <Input
                                   type="number"
+                                  inputMode="decimal"
                                   placeholder="0"
                                   value={newItem[field.key] || ''}
                                   onChange={e => setNewItem(prev => ({
@@ -340,7 +343,10 @@ export default function NutritionTab({ profileId }: Props) {
           <Card key={day.id} style={{ marginBottom: 8, overflow: 'hidden', padding: 0 }}>
             <div
               onClick={() => openDay(day)}
-              style={{ padding: '14px 16px', cursor: 'pointer' }}>
+              style={{
+                padding: '14px 16px', cursor: 'pointer', touchAction: 'manipulation',
+                userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none',
+              }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                 <span style={{ fontFamily: font.ui, fontSize: 14.5, fontWeight: 700, color: color.text, letterSpacing: -0.2 }}>
                   {new Date(day.date + 'T12:00:00').toLocaleDateString('es-ES', {

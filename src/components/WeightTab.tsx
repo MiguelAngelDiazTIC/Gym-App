@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Plus, X, Check, Trash2, TrendingDown, TrendingUp, Minus } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
 import { useLocalStorage } from '../hooks/useStorage'
+import { generateId } from '../utils/id'
 import type { WeightEntry } from '../types'
 import { color, font, radius } from '../styles/theme'
 import { Card, SectionLabel, ScreenTitle } from './ui/Card'
@@ -29,7 +30,7 @@ export default function WeightTab({ profileId }: Props) {
     const val = parseFloat(weightInput)
     if (isNaN(val) || val <= 0) return
     const entry: WeightEntry = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       profileId,
       weight: val,
       date: new Date().toISOString(),
@@ -236,6 +237,7 @@ export default function WeightTab({ profileId }: Props) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1.4rem' }}>
           <Input
             type="number"
+            inputMode="decimal"
             step="0.1"
             placeholder="75.5"
             value={weightInput}

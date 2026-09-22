@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { Plus, X, Check, Pencil, Trash2, ChevronRight, ChevronLeft, CalendarDays } from 'lucide-react'
 import { useLocalStorage } from '../hooks/useStorage'
+import { generateId } from '../utils/id'
 import type { Routine, RoutineWeek, WorkoutDay, Exercise, WorkoutLog, ExerciseLog } from '../types'
 import { color, font, radius, springDefault } from '../styles/theme'
 import { Card, SectionLabel, ScreenTitle } from './ui/Card'
@@ -73,7 +74,7 @@ export default function RoutineTab({ profileId }: Props) {
         let week = newWeeks.find(w => w.profileId === log.profileId && w.routineId === log.routineId && w.index === 1)
         if (!week) {
           week = {
-            id: crypto.randomUUID(),
+            id: generateId(),
             profileId: log.profileId,
             routineId: log.routineId,
             index: 1,
@@ -104,12 +105,12 @@ export default function RoutineTab({ profileId }: Props) {
   function createRoutine() {
     if (!routineName.trim()) return
     const days: WorkoutDay[] = Array.from({ length: numDays }, (_, i) => ({
-      id: crypto.randomUUID(),
+      id: generateId(),
       name: `Día ${i + 1}`,
       exercises: [],
     }))
     const routine: Routine = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       profileId,
       name: routineName.trim(),
       days,
@@ -155,7 +156,7 @@ export default function RoutineTab({ profileId }: Props) {
 
   function addExercise() {
     if (!selectedRoutine || !selectedDay || !newExercise.trim()) return
-    const exercise: Exercise = { id: crypto.randomUUID(), name: newExercise.trim() }
+    const exercise: Exercise = { id: generateId(), name: newExercise.trim() }
     const updated = {
       ...selectedRoutine,
       days: selectedRoutine.days.map(d =>
@@ -197,7 +198,7 @@ export default function RoutineTab({ profileId }: Props) {
     const existing = weeksFor(selectedRoutine.id)
     const maxIndex = existing.reduce((m, w) => Math.max(m, w.index), 0)
     const week: RoutineWeek = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       profileId,
       routineId: selectedRoutine.id,
       index: maxIndex + 1,
@@ -260,7 +261,7 @@ export default function RoutineTab({ profileId }: Props) {
   function finishWorkout() {
     if (!selectedRoutine || !selectedWeek || !selectedDay) return
     const log: WorkoutLog = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       profileId,
       routineId: selectedRoutine.id,
       weekId: selectedWeek.id,
@@ -531,7 +532,8 @@ export default function RoutineTab({ profileId }: Props) {
                     style={{
                       padding: '14px 16px',
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      cursor: 'pointer',
+                      cursor: 'pointer', touchAction: 'manipulation',
+                      userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none',
                     }}>
                     <div style={{ minWidth: 0 }}>
                       <span style={{ fontFamily: font.ui, fontSize: 15.5, fontWeight: 700, color: color.text, letterSpacing: -0.2 }}>
@@ -582,17 +584,19 @@ export default function RoutineTab({ profileId }: Props) {
                           <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
                             <Input
                               type="number"
+                              inputMode="numeric"
                               placeholder="Reps"
                               value={newSet.reps}
                               onChange={e => setNewSet(prev => ({ ...prev, reps: e.target.value }))}
-                              style={{ flex: 1, fontSize: 13.5 }}
+                              style={{ flex: 1 }}
                             />
                             <Input
                               type="number"
+                              inputMode="decimal"
                               placeholder="Kg"
                               value={newSet.weight}
                               onChange={e => setNewSet(prev => ({ ...prev, weight: e.target.value }))}
-                              style={{ flex: 1, fontSize: 13.5 }}
+                              style={{ flex: 1 }}
                             />
                             <PrimaryButton onClick={() => addSet(ex.id)} style={{ padding: '10px 14px' }}>
                               <Plus size={14} />

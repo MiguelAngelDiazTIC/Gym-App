@@ -8,4 +8,7 @@ export default defineConfig({
     react(),
     babel({ presets: [reactCompilerPreset()] })
   ],
+  server: {
+    host: true, // expose on the LAN so the dev server can be opened from a phone
+  },
 })

@@ -1,6 +1,8 @@
 import { AnimatePresence, motion } from 'motion/react'
 import type { ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { color, radius, shadow, springDefault } from '../../styles/theme'
+import { useKeyboardInset } from '../../hooks/useKeyboardInset'
 
 interface Props {
   open: boolean
@@ -9,7 +11,12 @@ interface Props {
 }
 
 export function Modal({ open, onClose, children }: Props) {
-  return (
+  const keyboardInset = useKeyboardInset()
+
+  // Portal to <body>: a fixed-position sheet nested inside an animated (transformed)
+  // ancestor gets trapped in that ancestor's box instead of the viewport, so on mobile
+  // it ends up clipped instead of overlaying the bottom tab bar.
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -28,7 +35,7 @@ export function Modal({ open, onClose, children }: Props) {
           <motion.div
             onClick={e => e.stopPropagation()}
             initial={{ y: '100%' }}
-            animate={{ y: 0 }}
+            animate={{ y: -keyboardInset }}
             exit={{ y: '100%' }}
             transition={springDefault}
             style={{
@@ -40,6 +47,10 @@ export function Modal({ open, onClose, children }: Props) {
               padding: '1.5rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom))',
               width: '100%',
               maxWidth: 480,
+              maxHeight: keyboardInset > 0 ? `calc(100dvh - ${keyboardInset}px - 24px)` : '85dvh',
+              overflowY: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              overscrollBehavior: 'contain',
             }}>
             <div style={{
               width: 36, height: 5, borderRadius: 3,
@@ -50,6 +61,7 @@ export function Modal({ open, onClose, children }: Props) {
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }

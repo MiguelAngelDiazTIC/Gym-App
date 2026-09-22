@@ -28,7 +28,8 @@ export default function App() {
 
   return (
     <div style={{
-      minHeight: '100dvh',
+      height: '100dvh',
+      overflow: 'hidden',
       background: color.bg,
       display: 'flex',
       flexDirection: 'column',
@@ -77,8 +78,15 @@ export default function App() {
         </IconButton>
       </div>
 
-      {/* Content */}
-      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(90px + env(safe-area-inset-bottom))' }}>
+      {/* Content — the only scrollable region; single scroll container avoids iOS chrome jump */}
+      <div style={{
+        flex: 1,
+        minHeight: 0,
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        overscrollBehavior: 'contain',
+        paddingBottom: 'calc(90px + env(safe-area-inset-bottom))',
+      }}>
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
