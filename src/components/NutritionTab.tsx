@@ -1,7 +1,12 @@
 import { useState } from 'react'
-import { Plus, X, Check, ChevronLeft, Trash2, ChevronRight } from 'lucide-react'
+import { motion, AnimatePresence } from 'motion/react'
+import { Plus, X, Check, ChevronLeft, Trash2, ChevronRight, Flame } from 'lucide-react'
 import { useLocalStorage } from '../hooks/useStorage'
 import type { NutritionDay, Meal, MacroEntry } from '../types'
+import { color, font, springDefault } from '../styles/theme'
+import { Card, SectionLabel, ScreenTitle } from './ui/Card'
+import { PrimaryButton, SecondaryButton, IconButton } from './ui/Button'
+import { Input, Label } from './ui/Field'
 
 interface Props {
   profileId: string
@@ -112,6 +117,28 @@ export default function NutritionTab({ profileId }: Props) {
     }, { kcal: 0, protein: 0, carbs: 0, fat: 0 })
   }
 
+  const BackButton = ({ onClick, children }: { onClick: () => void; children: React.ReactNode }) => (
+    <motion.button
+      onClick={onClick}
+      whileTap={{ scale: 0.95, x: -2 }}
+      style={{
+        background: 'none', border: 'none',
+        cursor: 'pointer', color: color.textSecondary,
+        fontFamily: font.ui, fontSize: 14, fontWeight: 600,
+        display: 'flex', alignItems: 'center', gap: 2,
+        marginBottom: '1.25rem', padding: 0,
+      }}>
+      <ChevronLeft size={18} /> {children}
+    </motion.button>
+  )
+
+  const macroFields: { key: keyof MacroEntry; label: string }[] = [
+    { key: 'kcal', label: 'Kcal' },
+    { key: 'protein', label: 'Proteína (g)' },
+    { key: 'carbs', label: 'Carbos (g)' },
+    { key: 'fat', label: 'Grasas (g)' },
+  ]
+
   // ─── Day view ─────────────────────────────────────────────
 
   if (view === 'day' && selectedDay) {
@@ -120,62 +147,54 @@ export default function NutritionTab({ profileId }: Props) {
 
     return (
       <div style={{ padding: '1.25rem' }}>
-        <button onClick={() => setView('home')} style={backBtnStyle}>
-          <ChevronLeft size={16} /> Volver
-        </button>
+        <BackButton onClick={() => setView('home')}>Volver</BackButton>
 
         <div style={{ marginBottom: '1.25rem' }}>
-          <div style={titleStyle}>
+          <ScreenTitle>
             {new Date(selectedDay.date + 'T12:00:00').toLocaleDateString('es-ES', {
               weekday: 'long', day: '2-digit', month: 'long',
             })}
-          </div>
+          </ScreenTitle>
         </div>
 
         {/* Daily totals */}
-        <div style={{
-          background: '#111520', border: '1px solid #1c2030',
-          borderRadius: 4, padding: '1rem', marginBottom: '1.25rem',
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
-            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, letterSpacing: 2, color: '#3a4058' }}>
-              TOTAL DEL DÍA
-            </span>
-            <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 22, fontWeight: 700, color: '#cdd0de' }}>
-              {Math.round(totals.kcal)} kcal
+        <Card style={{ padding: '1.1rem', marginBottom: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+            <SectionLabel>Total del día</SectionLabel>
+            <span style={{ fontFamily: font.ui, fontSize: 24, fontWeight: 800, color: color.text, letterSpacing: -0.5 }}>
+              {Math.round(totals.kcal)} <span style={{ fontSize: 14, fontWeight: 500, color: color.textTertiary }}>kcal</span>
             </span>
           </div>
 
           {/* Kcal bar */}
-          <div style={{ background: '#1c2030', borderRadius: 2, height: 4, marginBottom: 12, overflow: 'hidden' }}>
-            <div style={{
-              height: '100%', borderRadius: 2,
-              background: '#ff3d4d',
-              width: `${Math.min((totals.kcal / maxKcal) * 100, 100)}%`,
-              transition: 'width 0.3s ease',
-            }} />
+          <div style={{ background: color.border, borderRadius: 3, height: 6, marginBottom: 14, overflow: 'hidden' }}>
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min((totals.kcal / maxKcal) * 100, 100)}%` }}
+              transition={springDefault}
+              style={{ height: '100%', borderRadius: 3, background: color.accentGradient }} />
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
             {[
-              { label: 'Proteína', value: totals.protein, color: '#ff3d4d' },
-              { label: 'Carbos', value: totals.carbs, color: '#e8b84b' },
-              { label: 'Grasas', value: totals.fat, color: '#00c896' },
+              { label: 'Proteína', value: totals.protein, color: color.protein },
+              { label: 'Carbos', value: totals.carbs, color: color.carbs },
+              { label: 'Grasas', value: totals.fat, color: color.fat },
             ].map(macro => (
               <div key={macro.label} style={{ textAlign: 'center' }}>
                 <div style={{
-                  fontFamily: "'Rajdhani', sans-serif",
-                  fontSize: 18, fontWeight: 700,
+                  fontFamily: font.ui,
+                  fontSize: 19, fontWeight: 800, letterSpacing: -0.3,
                   color: macro.color,
                 }}>{Math.round(macro.value)}g</div>
                 <div style={{
-                  fontFamily: "'Barlow Condensed', sans-serif",
-                  fontSize: 10, color: '#3a4058', letterSpacing: 1,
+                  fontFamily: font.ui,
+                  fontSize: 11, color: color.textTertiary, fontWeight: 600,
                 }}>{macro.label}</div>
               </div>
             ))}
           </div>
-        </div>
+        </Card>
 
         {/* Meals */}
         {MEAL_ORDER.map(mealType => {
@@ -188,114 +207,107 @@ export default function NutritionTab({ profileId }: Props) {
           const isActive = activeMeal === mealType
 
           return (
-            <div key={mealType} style={{
-              background: '#111520',
-              border: `1px solid ${isActive ? '#ff3d4d' : '#1c2030'}`,
-              borderRadius: 4, marginBottom: 8, overflow: 'hidden',
-              transition: 'border-color 0.2s',
-            }}>
+            <Card key={mealType} active={isActive} style={{ marginBottom: 8, overflow: 'hidden', padding: 0 }}>
               <div
                 onClick={() => setActiveMeal(isActive ? null : mealType)}
                 style={{
-                  padding: '10px 14px',
+                  padding: '12px 16px',
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   cursor: 'pointer',
                 }}>
-                <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, color: '#cdd0de' }}>
+                <span style={{ fontFamily: font.ui, fontSize: 15, fontWeight: 700, color: color.text, letterSpacing: -0.2 }}>
                   {MEAL_LABELS[mealType]}
                 </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   {meal.items.length > 0 && (
-                    <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: '#7a8098' }}>
+                    <span style={{ fontFamily: font.ui, fontSize: 12, color: color.textSecondary, fontWeight: 500 }}>
                       {Math.round(mealTotals.kcal)} kcal
                     </span>
                   )}
-                  <ChevronRight size={14} color="#3a4058" style={{
-                    transform: isActive ? 'rotate(90deg)' : 'none',
-                    transition: 'transform 0.2s',
-                  }} />
+                  <motion.div animate={{ rotate: isActive ? 90 : 0 }} transition={springDefault}>
+                    <ChevronRight size={15} color={color.textTertiary} />
+                  </motion.div>
                 </div>
               </div>
 
-              {isActive && (
-                <div style={{ borderTop: '1px solid #1c2030', padding: '0 14px 14px' }}>
+              <AnimatePresence initial={false}>
+                {isActive && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={springDefault}
+                    style={{ overflow: 'hidden' }}>
+                    <div style={{ borderTop: `1px solid ${color.border}`, padding: '0 16px 16px' }}>
 
-                  {meal.items.map((item, i) => (
-                    <div key={i} style={{
-                      padding: '8px 0',
-                      borderBottom: '1px solid #1c2030',
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    }}>
-                      <div>
-                        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#cdd0de' }}>
-                          {item.name}
-                        </div>
-                        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: '#3a4058' }}>
-                          P: {item.protein}g · C: {item.carbs}g · G: {item.fat}g · {item.kcal}kcal
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => deleteItem(mealType, i)}
-                        style={iconBtnStyle}
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#ff3d4d'}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#3a4058'}>
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  ))}
-
-                  {showAddItem && activeMeal === mealType ? (
-                    <div style={{ marginTop: 10 }}>
-                      <input
-                        placeholder="Nombre (ej: Pasta con atún)"
-                        value={newItem.name}
-                        onChange={e => setNewItem(prev => ({ ...prev, name: e.target.value }))}
-                        style={{ ...inputStyle, marginBottom: 8 }}
-                        autoFocus
-                      />
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
-                        {[
-                          { key: 'kcal', label: 'Kcal' },
-                          { key: 'protein', label: 'Proteína (g)' },
-                          { key: 'carbs', label: 'Carbos (g)' },
-                          { key: 'fat', label: 'Grasas (g)' },
-                        ].map(field => (
-                          <div key={field.key}>
-                            <div style={{ ...labelStyle, marginBottom: 4 }}>{field.label}</div>
-                            <input
-                              type="number"
-                              placeholder="0"
-                              value={newItem[field.key as keyof MacroEntry] || ''}
-                              onChange={e => setNewItem(prev => ({
-                                ...prev,
-                                [field.key]: parseFloat(e.target.value) || 0,
-                              }))}
-                              style={{ ...inputStyle, marginBottom: 0 }}
-                            />
+                      {meal.items.map((item, i) => (
+                        <div key={i} style={{
+                          padding: '10px 0',
+                          borderBottom: `1px solid ${color.border}`,
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        }}>
+                          <div>
+                            <div style={{ fontFamily: font.ui, fontSize: 13.5, fontWeight: 600, color: color.text }}>
+                              {item.name}
+                            </div>
+                            <div style={{ fontFamily: font.ui, fontSize: 11.5, color: color.textTertiary, marginTop: 1 }}>
+                              P: {item.protein}g · C: {item.carbs}g · G: {item.fat}g · {item.kcal}kcal
+                            </div>
                           </div>
-                        ))}
-                      </div>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button
-                          onClick={() => { setShowAddItem(false); setNewItem({ name: '', kcal: 0, protein: 0, carbs: 0, fat: 0 }) }}
-                          style={{ ...secondaryBtnStyle, flex: 1 }}>
-                          <X size={14} /> Cancelar
-                        </button>
-                        <button onClick={addItem} style={{ ...primaryBtnStyle, flex: 1, justifyContent: 'center', marginBottom: 0 }}>
-                          <Check size={14} /> Añadir
-                        </button>
-                      </div>
+                          <IconButton onClick={() => deleteItem(mealType, i)} style={{ padding: 4 }}>
+                            <Trash2 size={13} />
+                          </IconButton>
+                        </div>
+                      ))}
+
+                      {showAddItem && activeMeal === mealType ? (
+                        <div style={{ marginTop: 12 }}>
+                          <Input
+                            placeholder="Nombre (ej: Pasta con atún)"
+                            value={newItem.name}
+                            onChange={e => setNewItem(prev => ({ ...prev, name: e.target.value }))}
+                            style={{ marginBottom: 8 }}
+                            autoFocus
+                          />
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+                            {macroFields.map(field => (
+                              <div key={field.key}>
+                                <Label>{field.label}</Label>
+                                <Input
+                                  type="number"
+                                  placeholder="0"
+                                  value={newItem[field.key] || ''}
+                                  onChange={e => setNewItem(prev => ({
+                                    ...prev,
+                                    [field.key]: parseFloat(e.target.value) || 0,
+                                  }))}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <SecondaryButton
+                              onClick={() => { setShowAddItem(false); setNewItem({ name: '', kcal: 0, protein: 0, carbs: 0, fat: 0 }) }}
+                              style={{ flex: 1 }}>
+                              <X size={14} /> Cancelar
+                            </SecondaryButton>
+                            <PrimaryButton onClick={addItem} style={{ flex: 1 }}>
+                              <Check size={14} /> Añadir
+                            </PrimaryButton>
+                          </div>
+                        </div>
+                      ) : (
+                        <SecondaryButton
+                          onClick={() => { setShowAddItem(true); setActiveMeal(mealType) }}
+                          style={{ marginTop: 12, width: '100%' }}>
+                          <Plus size={14} /> Añadir alimento
+                        </SecondaryButton>
+                      )}
                     </div>
-                  ) : (
-                    <button
-                      onClick={() => { setShowAddItem(true); setActiveMeal(mealType) }}
-                      style={{ ...secondaryBtnStyle, marginTop: 10, width: '100%', justifyContent: 'center' }}>
-                      <Plus size={14} /> Añadir alimento
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </Card>
           )
         })}
       </div>
@@ -307,68 +319,57 @@ export default function NutritionTab({ profileId }: Props) {
   return (
     <div style={{ padding: '1.25rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <div style={titleStyle}>Nutrición</div>
-        <button onClick={createDay} style={primaryBtnStyle}>
+        <ScreenTitle>Nutrición</ScreenTitle>
+        <PrimaryButton onClick={createDay} style={{ padding: '9px 16px' }}>
           <Plus size={16} /> Añadir día
-        </button>
+        </PrimaryButton>
       </div>
 
       {myDays.length === 0 && (
-        <div style={{
-          textAlign: 'center', padding: '3rem 1rem',
-          fontFamily: "'Barlow Condensed', sans-serif",
-          fontSize: 13, color: '#3a4058',
-        }}>
-          No hay días registrados. Añade uno para empezar.
-        </div>
+        <Card style={{ padding: '3rem 1rem', textAlign: 'center' }}>
+          <div style={{ fontFamily: font.ui, fontSize: 13.5, color: color.textTertiary }}>
+            No hay días registrados. Añade uno para empezar.
+          </div>
+        </Card>
       )}
 
       {[...myDays].reverse().map(day => {
         const totals = getTotals(day)
         const maxKcal = 2500
         return (
-          <div
-            key={day.id}
-            style={{
-              background: '#111520', border: '1px solid #1c2030',
-              borderRadius: 4, marginBottom: 8, overflow: 'hidden',
-              cursor: 'pointer',
-              transition: 'border-color 0.2s',
-            }}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#242840'}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1c2030'}
-          >
+          <Card key={day.id} style={{ marginBottom: 8, overflow: 'hidden', padding: 0 }}>
             <div
               onClick={() => openDay(day)}
-              style={{ padding: '12px 14px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, fontWeight: 700, color: '#cdd0de' }}>
+              style={{ padding: '14px 16px', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <span style={{ fontFamily: font.ui, fontSize: 14.5, fontWeight: 700, color: color.text, letterSpacing: -0.2 }}>
                   {new Date(day.date + 'T12:00:00').toLocaleDateString('es-ES', {
                     weekday: 'long', day: '2-digit', month: 'long',
                   })}
                 </span>
-                <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 16, fontWeight: 700, color: '#cdd0de' }}>
-                  {Math.round(totals.kcal)} kcal
+                <span style={{ fontFamily: font.ui, fontSize: 17, fontWeight: 800, color: color.text, letterSpacing: -0.3, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Flame size={15} color={color.accent} />
+                  {Math.round(totals.kcal)}
                 </span>
               </div>
 
-              <div style={{ background: '#1c2030', borderRadius: 2, height: 3, marginBottom: 8, overflow: 'hidden' }}>
+              <div style={{ background: color.border, borderRadius: 2, height: 4, marginBottom: 10, overflow: 'hidden' }}>
                 <div style={{
                   height: '100%', borderRadius: 2,
-                  background: '#ff3d4d',
+                  background: color.accentGradient,
                   width: `${Math.min((totals.kcal / maxKcal) * 100, 100)}%`,
                 }} />
               </div>
 
               <div style={{ display: 'flex', gap: 16 }}>
                 {[
-                  { label: 'P', value: totals.protein, color: '#ff3d4d' },
-                  { label: 'C', value: totals.carbs, color: '#e8b84b' },
-                  { label: 'G', value: totals.fat, color: '#00c896' },
+                  { label: 'P', value: totals.protein, color: color.protein },
+                  { label: 'C', value: totals.carbs, color: color.carbs },
+                  { label: 'G', value: totals.fat, color: color.fat },
                 ].map(m => (
                   <span key={m.label} style={{
-                    fontFamily: "'Barlow Condensed', sans-serif",
-                    fontSize: 12, color: '#7a8098',
+                    fontFamily: font.ui,
+                    fontSize: 12.5, color: color.textSecondary, fontWeight: 500,
                   }}>
                     <span style={{ color: m.color, fontWeight: 700 }}>{Math.round(m.value)}g</span> {m.label}
                   </span>
@@ -377,79 +378,17 @@ export default function NutritionTab({ profileId }: Props) {
             </div>
 
             <div style={{
-              padding: '8px 14px',
-              borderTop: '1px solid #1c2030',
+              padding: '8px 16px',
+              borderTop: `1px solid ${color.border}`,
               display: 'flex', justifyContent: 'flex-end',
             }}>
-              <button
-                onClick={e => { e.stopPropagation(); deleteDay(day.id) }}
-                style={iconBtnStyle}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#ff3d4d'}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#3a4058'}>
+              <IconButton onClick={() => deleteDay(day.id)} style={{ padding: 4 }}>
                 <Trash2 size={13} />
-              </button>
+              </IconButton>
             </div>
-          </div>
+          </Card>
         )
       })}
     </div>
   )
-}
-
-// ─── Shared styles ────────────────────────────────────────
-
-const titleStyle: React.CSSProperties = {
-  fontFamily: "'Rajdhani', sans-serif",
-  fontSize: 22, fontWeight: 700,
-  color: '#cdd0de', letterSpacing: 1,
-}
-
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontFamily: "'Barlow Condensed', sans-serif",
-  fontSize: 11, letterSpacing: 2,
-  color: '#3a4058', marginBottom: 6,
-}
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  background: '#0d1018', border: '1px solid #242840',
-  color: '#cdd0de', padding: '8px 12px',
-  borderRadius: 3, fontSize: 13,
-  fontFamily: "'Barlow Condensed', sans-serif",
-  outline: 'none',
-}
-
-const primaryBtnStyle: React.CSSProperties = {
-  background: '#ff3d4d', border: 'none',
-  borderRadius: 3, padding: '8px 14px',
-  cursor: 'pointer', color: '#fff',
-  fontFamily: "'Barlow Condensed', sans-serif",
-  fontSize: 13, letterSpacing: 1, fontWeight: 700,
-  display: 'flex', alignItems: 'center', gap: 6,
-  marginBottom: 0,
-}
-
-const secondaryBtnStyle: React.CSSProperties = {
-  background: 'none', border: '1px solid #242840',
-  borderRadius: 3, padding: '8px 14px',
-  cursor: 'pointer', color: '#7a8098',
-  fontFamily: "'Barlow Condensed', sans-serif",
-  fontSize: 13, letterSpacing: 1,
-  display: 'flex', alignItems: 'center', gap: 6,
-}
-
-const iconBtnStyle: React.CSSProperties = {
-  background: 'none', border: 'none',
-  cursor: 'pointer', color: '#3a4058',
-  padding: 0, display: 'flex', alignItems: 'center',
-}
-
-const backBtnStyle: React.CSSProperties = {
-  background: 'none', border: 'none',
-  cursor: 'pointer', color: '#7a8098',
-  fontFamily: "'Barlow Condensed', sans-serif",
-  fontSize: 13, letterSpacing: 1,
-  display: 'flex', alignItems: 'center', gap: 4,
-  marginBottom: '1.25rem', padding: 0,
 }

@@ -1,13 +1,22 @@
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { Weight, Dumbbell, UtensilsCrossed, LogOut } from 'lucide-react'
 import ProfileScreen from './components/ProfileScreen'
 import WeightTab from './components/WeightTab'
 import RoutineTab from './components/RoutineTab'
 import NutritionTab from './components/NutritionTab'
+import { color, font, radius, springDefault, springSnappy } from './styles/theme'
+import { IconButton } from './components/ui/Button'
 
 type Tab = 'weight' | 'routine' | 'nutrition'
 
 import type { Profile } from './types'
+
+const TABS: { id: Tab; label: string; icon: any }[] = [
+  { id: 'weight', label: 'Peso', icon: Weight },
+  { id: 'routine', label: 'Rutina', icon: Dumbbell },
+  { id: 'nutrition', label: 'Nutrición', icon: UtensilsCrossed },
+]
 
 export default function App() {
   const [activeProfile, setActiveProfile] = useState<Profile | null>(null)
@@ -19,8 +28,8 @@ export default function App() {
 
   return (
     <div style={{
-      minHeight: '100vh',
-      background: '#080b14',
+      minHeight: '100dvh',
+      background: color.bg,
       display: 'flex',
       flexDirection: 'column',
       maxWidth: 480,
@@ -28,57 +37,63 @@ export default function App() {
       position: 'relative',
     }}>
 
-      {/* Header */}
+      {/* Header — translucent material, floats above content */}
       <div style={{
+        position: 'sticky', top: 0, zIndex: 100,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '1rem 1.25rem 0.75rem',
-        borderBottom: '1px solid #1c2030',
+        padding: 'calc(0.9rem + env(safe-area-inset-top)) 1.25rem 0.9rem',
+        background: 'rgba(8,8,12,0.72)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        borderBottom: `1px solid ${color.border}`,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {activeProfile.photo
             ? <img src={activeProfile.photo} style={{
-                width: 32, height: 32, borderRadius: 4,
-                objectFit: 'cover', border: '1px solid #242840',
+                width: 34, height: 34, borderRadius: radius.pill,
+                objectFit: 'cover', border: `1px solid ${color.borderStrong}`,
               }} />
             : <div style={{
-                width: 32, height: 32, borderRadius: 4,
-                background: '#111520', border: '1px solid #242840',
+                width: 34, height: 34, borderRadius: radius.pill,
+                background: color.accentGradient,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: "'Rajdhani', sans-serif",
-                fontWeight: 700, fontSize: 16, color: '#cdd0de',
+                fontFamily: font.ui,
+                fontWeight: 700, fontSize: 15, color: '#fff',
               }}>{activeProfile.name[0].toUpperCase()}</div>
           }
           <span style={{
-            fontFamily: "'Barlow Condensed', sans-serif",
-            fontSize: 14, fontWeight: 700,
-            letterSpacing: 1, color: '#cdd0de',
+            fontFamily: font.ui,
+            fontSize: 16, fontWeight: 700,
+            letterSpacing: -0.2, color: color.text,
           }}>{activeProfile.name}</span>
         </div>
 
-        <button
+        <IconButton
           onClick={() => setActiveProfile(null)}
-          style={{
-            background: 'none', border: 'none',
-            cursor: 'pointer', color: '#3a4058',
-            display: 'flex', alignItems: 'center', gap: 5,
-            fontFamily: "'Barlow Condensed', sans-serif",
-            fontSize: 12, letterSpacing: 1,
-          }}>
-          <LogOut size={14} />
-          Salir
-        </button>
+          style={{ color: color.textTertiary, fontSize: 12, fontWeight: 600, gap: 5, padding: '6px 8px' }}>
+          <LogOut size={15} />
+        </IconButton>
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 80 }}>
-        {activeTab === 'weight' && <WeightTab profileId={activeProfile.id} />}
-        {activeTab === 'routine' && <RoutineTab profileId={activeProfile.id} />}
-        {activeTab === 'nutrition' && <NutritionTab profileId={activeProfile.id} />}
+      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 'calc(90px + env(safe-area-inset-bottom))' }}>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={springDefault}>
+            {activeTab === 'weight' && <WeightTab profileId={activeProfile.id} />}
+            {activeTab === 'routine' && <RoutineTab profileId={activeProfile.id} />}
+            {activeTab === 'nutrition' && <NutritionTab profileId={activeProfile.id} />}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
-      {/* Bottom tabs */}
+      {/* Bottom tab bar — translucent material, floating indicator */}
       <div style={{
         position: 'fixed',
         bottom: 0,
@@ -86,46 +101,58 @@ export default function App() {
         transform: 'translateX(-50%)',
         width: '100%',
         maxWidth: 480,
-        background: '#0c0f1c',
-        borderTop: '1px solid #1c2030',
+        background: 'rgba(12,12,17,0.78)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        borderTop: `1px solid ${color.border}`,
         display: 'flex',
+        paddingBottom: 'env(safe-area-inset-bottom)',
         zIndex: 100,
       }}>
-        {([
-          { id: 'weight', label: 'Peso', icon: Weight },
-          { id: 'routine', label: 'Rutina', icon: Dumbbell },
-          { id: 'nutrition', label: 'Nutrición', icon: UtensilsCrossed },
-        ] as { id: Tab; label: string; icon: any }[]).map(tab => {
+        {TABS.map(tab => {
           const active = activeTab === tab.id
           return (
-            <button
+            <motion.button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              whileTap={{ scale: 0.92 }}
+              transition={springSnappy}
               style={{
                 flex: 1,
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                padding: '0.75rem 0',
+                padding: '10px 0 8px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 gap: 4,
-                borderTop: `2px solid ${active ? '#ff3d4d' : 'transparent'}`,
-                transition: 'border-color 0.2s',
+                position: 'relative',
               }}>
+              {active && (
+                <motion.div
+                  layoutId="tab-indicator"
+                  transition={springDefault}
+                  style={{
+                    position: 'absolute', top: 0, left: '20%', right: '20%', height: 2,
+                    borderRadius: 2,
+                    background: color.accentGradient,
+                  }}
+                />
+              )}
               <tab.icon
-                size={20}
-                color={active ? '#ff3d4d' : '#3a4058'}
+                size={21}
+                strokeWidth={active ? 2.4 : 2}
+                color={active ? color.text : color.textTertiary}
               />
               <span style={{
-                fontFamily: "'Barlow Condensed', sans-serif",
-                fontSize: 10,
-                letterSpacing: 1.5,
-                textTransform: 'uppercase',
-                color: active ? '#cdd0de' : '#3a4058',
+                fontFamily: font.ui,
+                fontSize: 10.5,
+                fontWeight: 600,
+                letterSpacing: -0.1,
+                color: active ? color.text : color.textTertiary,
               }}>{tab.label}</span>
-            </button>
+            </motion.button>
           )
         })}
       </div>

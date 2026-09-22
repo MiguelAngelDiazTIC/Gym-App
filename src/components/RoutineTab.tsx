@@ -1,7 +1,12 @@
 import { useState } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { Plus, X, Check, Pencil, Trash2, ChevronRight, ChevronLeft } from 'lucide-react'
 import { useLocalStorage } from '../hooks/useStorage'
 import type { Routine, WorkoutDay, Exercise, WorkoutLog, ExerciseLog } from '../types'
+import { color, font, radius, springDefault } from '../styles/theme'
+import { Card, SectionLabel, ScreenTitle } from './ui/Card'
+import { PrimaryButton, IconButton } from './ui/Button'
+import { Input, Label } from './ui/Field'
 
 interface Props {
   profileId: string
@@ -161,372 +166,326 @@ export default function RoutineTab({ profileId }: Props) {
     setView('home')
   }
 
+  const BackButton = ({ onClick, children }: { onClick: () => void; children: React.ReactNode }) => (
+    <motion.button
+      onClick={onClick}
+      whileTap={{ scale: 0.95, x: -2 }}
+      style={{
+        background: 'none', border: 'none',
+        cursor: 'pointer', color: color.textSecondary,
+        fontFamily: font.ui, fontSize: 14, fontWeight: 600,
+        display: 'flex', alignItems: 'center', gap: 2,
+        marginBottom: '1.25rem', padding: 0,
+      }}>
+      <ChevronLeft size={18} /> {children}
+    </motion.button>
+  )
+
   // ─── Render ───────────────────────────────────────────────
 
-  // Create routine view
-  if (view === 'createRoutine') {
-    return (
-      <div style={{ padding: '1.25rem' }}>
-        <button onClick={() => setView('home')} style={backBtnStyle}>
-          <ChevronLeft size={16} /> Volver
-        </button>
-        <div style={{ ...titleStyle, marginBottom: '1.5rem' }}>Nueva rutina</div>
-
-        <label style={labelStyle}>Nombre</label>
-        <input
-          value={routineName}
-          onChange={e => setRoutineName(e.target.value)}
-          placeholder="Ej: Push Pull Legs"
-          style={inputStyle}
-          autoFocus
-        />
-
-        <label style={{ ...labelStyle, marginTop: '1rem' }}>Días por semana</label>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-          {[2, 3, 4, 5, 6].map(n => (
-            <button
-              key={n}
-              onClick={() => setNumDays(n)}
-              style={{
-                ...pillBtnStyle,
-                background: numDays === n ? '#ff3d4d' : '#111520',
-                color: numDays === n ? '#fff' : '#7a8098',
-                border: `1px solid ${numDays === n ? '#ff3d4d' : '#242840'}`,
-              }}>
-              {n}
-            </button>
-          ))}
-        </div>
-
-        <button onClick={createRoutine} style={primaryBtnStyle}>
-          <Check size={16} /> Crear rutina
-        </button>
-      </div>
-    )
-  }
-
-  // Edit day view
-  if (view === 'editDay' && selectedRoutine && selectedDay) {
-    return (
-      <div style={{ padding: '1.25rem' }}>
-        <button onClick={() => setView('home')} style={backBtnStyle}>
-          <ChevronLeft size={16} /> Volver
-        </button>
-
-        <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem', alignItems: 'center' }}>
-          <input
-            value={editingDayName}
-            onChange={e => setEditingDayName(e.target.value)}
-            style={{ ...inputStyle, flex: 1, marginBottom: 0 }}
-          />
-          <button onClick={saveDayName} style={{ ...primaryBtnStyle, padding: '8px 12px', marginBottom: 0 }}>
-            <Check size={14} />
-          </button>
-        </div>
-
-        <label style={labelStyle}>Ejercicios</label>
-
-        <div style={{ marginBottom: '1rem' }}>
-          {selectedDay.exercises.map(ex => (
-            <div key={ex.id} style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '10px 12px',
-              background: '#111520', borderBottom: '1px solid #1c2030',
-            }}>
-              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 14, color: '#cdd0de' }}>
-                {ex.name}
-              </span>
-              <button onClick={() => deleteExercise(ex.id)} style={iconBtnStyle}>
-                <Trash2 size={13} />
-              </button>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input
-            value={newExercise}
-            onChange={e => setNewExercise(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && addExercise()}
-            placeholder="Nombre del ejercicio"
-            style={{ ...inputStyle, flex: 1, marginBottom: 0 }}
-          />
-          <button onClick={addExercise} style={{ ...primaryBtnStyle, padding: '8px 12px', marginBottom: 0 }}>
-            <Plus size={16} />
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  // Workout session view
-  if (view === 'workout' && selectedRoutine && selectedDay) {
-    return (
-      <div style={{ padding: '1.25rem' }}>
-        <button onClick={() => setView('home')} style={backBtnStyle}>
-          <ChevronLeft size={16} /> Cancelar
-        </button>
-        <div style={titleStyle}>{selectedDay.name}</div>
-        <div style={{ ...subtitleStyle, marginBottom: '1.25rem' }}>
-          {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: 'long' })}
-        </div>
-
-        {selectedDay.exercises.map(ex => {
-          const log = sessionLog.find(l => l.exerciseId === ex.id)
-          const isActive = activeExercise === ex.id
-          return (
-            <div key={ex.id} style={{
-              background: '#111520', border: `1px solid ${isActive ? '#ff3d4d' : '#1c2030'}`,
-              borderRadius: 4, marginBottom: 8, overflow: 'hidden',
-              transition: 'border-color 0.2s',
-            }}>
-              <div
-                onClick={() => setActiveExercise(isActive ? null : ex.id)}
-                style={{
-                  padding: '12px 14px',
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  cursor: 'pointer',
-                }}>
-                <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 15, fontWeight: 700, color: '#cdd0de' }}>
-                  {ex.name}
-                </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: '#3a4058' }}>
-                    {log?.sets.length || 0} series
-                  </span>
-                  <ChevronRight size={14} color="#3a4058" style={{ transform: isActive ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
-                </div>
-              </div>
-
-              {isActive && (
-                <div style={{ padding: '0 14px 14px', borderTop: '1px solid #1c2030' }}>
-                  {log?.sets.map((set, i) => (
-                    <div key={i} style={{
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      padding: '6px 0', borderBottom: '1px solid #1c2030',
-                    }}>
-                      <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, color: '#3a4058' }}>
-                        Serie {i + 1}
-                      </span>
-                      <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, color: '#cdd0de' }}>
-                        {set.reps} reps · {set.weight} kg
-                      </span>
-                      <button onClick={() => removeSet(ex.id, i)} style={iconBtnStyle}>
-                        <X size={12} />
-                      </button>
-                    </div>
-                  ))}
-
-                  <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
-                    <input
-                      type="number"
-                      placeholder="Reps"
-                      value={newSet.reps}
-                      onChange={e => setNewSet(prev => ({ ...prev, reps: e.target.value }))}
-                      style={{ ...inputStyle, flex: 1, marginBottom: 0, fontSize: 13 }}
-                    />
-                    <input
-                      type="number"
-                      placeholder="Kg"
-                      value={newSet.weight}
-                      onChange={e => setNewSet(prev => ({ ...prev, weight: e.target.value }))}
-                      style={{ ...inputStyle, flex: 1, marginBottom: 0, fontSize: 13 }}
-                    />
-                    <button onClick={() => addSet(ex.id)} style={{ ...primaryBtnStyle, padding: '8px 12px', marginBottom: 0 }}>
-                      <Plus size={14} />
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )
-        })}
-
-        <button onClick={finishWorkout} style={{ ...primaryBtnStyle, marginTop: '1rem', width: '100%', justifyContent: 'center' }}>
-          <Check size={16} /> Finalizar entrenamiento
-        </button>
-      </div>
-    )
-  }
-
-  // Home view
   return (
     <div style={{ padding: '1.25rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <div style={titleStyle}>Rutinas</div>
-        <button onClick={() => setView('createRoutine')} style={primaryBtnStyle}>
-          <Plus size={16} /> Nueva
-        </button>
-      </div>
+      <AnimatePresence mode="wait">
 
-      {myRoutines.length === 0 && (
-        <div style={{
-          textAlign: 'center', padding: '3rem 1rem',
-          fontFamily: "'Barlow Condensed', sans-serif",
-          fontSize: 13, color: '#3a4058',
-        }}>
-          No tienes rutinas. Crea una para empezar.
-        </div>
-      )}
+        {/* Create routine view */}
+        {view === 'createRoutine' && (
+          <motion.div key="create" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={springDefault}>
+            <BackButton onClick={() => setView('home')}>Volver</BackButton>
+            <ScreenTitle>Nueva rutina</ScreenTitle>
+            <div style={{ height: 20 }} />
 
-      {myRoutines.map(routine => (
-        <div key={routine.id} style={{
-          background: '#111520', border: '1px solid #1c2030',
-          borderRadius: 4, marginBottom: '1rem', overflow: 'hidden',
-        }}>
-          <div style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '12px 14px', borderBottom: '1px solid #1c2030',
-          }}>
-            <span style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: 18, fontWeight: 700, color: '#cdd0de', letterSpacing: 1 }}>
-              {routine.name}
-            </span>
-            <button onClick={() => deleteRoutine(routine.id)} style={iconBtnStyle}>
-              <Trash2 size={14} />
-            </button>
-          </div>
+            <Label>Nombre</Label>
+            <Input
+              value={routineName}
+              onChange={e => setRoutineName(e.target.value)}
+              placeholder="Ej: Push Pull Legs"
+              autoFocus
+              style={{ marginBottom: '1.1rem' }}
+            />
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 1, background: '#1c2030' }}>
-            {routine.days.map(day => (
-              <div key={day.id} style={{ background: '#111520', padding: '12px' }}>
-                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 700, color: '#cdd0de', marginBottom: 4 }}>
-                  {day.name}
-                </div>
-                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, color: '#3a4058', marginBottom: 10 }}>
-                  {day.exercises.length} ejercicios
-                </div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button
-                    onClick={() => openEditDay(routine, day)}
-                    style={{ ...iconBtnStyle, fontSize: 10, gap: 4, display: 'flex', alignItems: 'center' }}>
-                    <Pencil size={11} />
-                  </button>
-                  <button
-                    onClick={() => startWorkout(routine, day)}
-                    style={{
-                      flex: 1, background: '#ff3d4d', border: 'none',
-                      borderRadius: 3, padding: '4px 6px',
-                      cursor: 'pointer', color: '#fff',
-                      fontFamily: "'Barlow Condensed', sans-serif",
-                      fontSize: 10, letterSpacing: 0.5,
-                    }}>
-                    Entrenar
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Recent logs for this routine */}
-          {myLogs.filter(l => l.routineId === routine.id).length > 0 && (
-            <div style={{ padding: '10px 14px', borderTop: '1px solid #1c2030' }}>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, letterSpacing: 2, color: '#3a4058', marginBottom: 6 }}>
-                ÚLTIMOS ENTRENAMIENTOS
-              </div>
-              {myLogs.filter(l => l.routineId === routine.id).slice(-3).reverse().map(log => {
-                const day = routine.days.find(d => d.id === log.dayId)
-                const totalSets = log.exercises.reduce((acc, e) => acc + e.sets.length, 0)
-                return (
-                  <div key={log.id} style={{
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                    fontFamily: "'Barlow Condensed', sans-serif",
-                    fontSize: 12, color: '#7a8098', marginBottom: 3,
+            <Label>Días por semana</Label>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '8px 0 1.75rem' }}>
+              {[2, 3, 4, 5, 6].map(n => (
+                <motion.button
+                  key={n}
+                  onClick={() => setNumDays(n)}
+                  whileTap={{ scale: 0.9 }}
+                  style={{
+                    width: 46, height: 46, borderRadius: radius.md,
+                    cursor: 'pointer', border: 'none',
+                    fontFamily: font.ui, fontSize: 17, fontWeight: 700,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: numDays === n ? color.accentGradient : color.surface,
+                    color: numDays === n ? '#fff' : color.textSecondary,
+                    outline: numDays === n ? 'none' : `1px solid ${color.border}`,
                   }}>
-                    <span>{day?.name || 'Día'} · {totalSets} series</span>
+                  {n}
+                </motion.button>
+              ))}
+            </div>
+
+            <PrimaryButton onClick={createRoutine} style={{ width: '100%' }}>
+              <Check size={16} /> Crear rutina
+            </PrimaryButton>
+          </motion.div>
+        )}
+
+        {/* Edit day view */}
+        {view === 'editDay' && selectedRoutine && selectedDay && (
+          <motion.div key="editDay" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={springDefault}>
+            <BackButton onClick={() => setView('home')}>Volver</BackButton>
+
+            <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem', alignItems: 'center' }}>
+              <Input
+                value={editingDayName}
+                onChange={e => setEditingDayName(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <PrimaryButton onClick={saveDayName} style={{ padding: '11px 14px' }}>
+                <Check size={14} />
+              </PrimaryButton>
+            </div>
+
+            <Label>Ejercicios</Label>
+            <div style={{ margin: '8px 0 1rem' }}>
+              <Card style={{ overflow: 'hidden', padding: 0 }}>
+                {selectedDay.exercises.length === 0 && (
+                  <div style={{ padding: '1.25rem', textAlign: 'center', fontFamily: font.ui, fontSize: 13, color: color.textTertiary }}>
+                    Añade ejercicios a este día
+                  </div>
+                )}
+                {selectedDay.exercises.map((ex, i, arr) => (
+                  <div key={ex.id} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '12px 14px',
+                    borderBottom: i < arr.length - 1 ? `1px solid ${color.border}` : 'none',
+                  }}>
+                    <span style={{ fontFamily: font.ui, fontSize: 14.5, fontWeight: 500, color: color.text }}>
+                      {ex.name}
+                    </span>
+                    <IconButton onClick={() => deleteExercise(ex.id)} style={{ padding: 4 }}>
+                      <Trash2 size={14} />
+                    </IconButton>
+                  </div>
+                ))}
+              </Card>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Input
+                value={newExercise}
+                onChange={e => setNewExercise(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addExercise()}
+                placeholder="Nombre del ejercicio"
+                style={{ flex: 1 }}
+              />
+              <PrimaryButton onClick={addExercise} style={{ padding: '11px 14px' }}>
+                <Plus size={16} />
+              </PrimaryButton>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Workout session view */}
+        {view === 'workout' && selectedRoutine && selectedDay && (
+          <motion.div key="workout" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={springDefault}>
+            <BackButton onClick={() => setView('home')}>Cancelar</BackButton>
+            <ScreenTitle subtitle={new Date().toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: 'long' })}>
+              {selectedDay.name}
+            </ScreenTitle>
+            <div style={{ height: 20 }} />
+
+            {selectedDay.exercises.map(ex => {
+              const log = sessionLog.find(l => l.exerciseId === ex.id)
+              const isActive = activeExercise === ex.id
+              return (
+                <Card key={ex.id} active={isActive} style={{ marginBottom: 8, overflow: 'hidden', padding: 0 }}>
+                  <div
+                    onClick={() => setActiveExercise(isActive ? null : ex.id)}
+                    style={{
+                      padding: '14px 16px',
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      cursor: 'pointer',
+                    }}>
+                    <span style={{ fontFamily: font.ui, fontSize: 15.5, fontWeight: 700, color: color.text, letterSpacing: -0.2 }}>
+                      {ex.name}
+                    </span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span>{new Date(log.date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}</span>
-                      <button
-                        onClick={() => {
-                          setSelectedRoutine(routine)
-                          setSelectedDay(day || null)
-                          setSessionLog(log.exercises)
-                          setActiveExercise(null)
-                          deleteLog(log.id)
-                          setView('workout')
-                        }}
-                        style={{ ...iconBtnStyle, color: '#3a4058' }}
-                        title="Editar">
-                        <Pencil size={12} />
-                      </button>
-                      <button
-                        onClick={() => deleteLog(log.id)}
-                        style={{ ...iconBtnStyle, color: '#3a4058' }}
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.color = '#ff3d4d'}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.color = '#3a4058'}
-                        title="Borrar">
-                        <Trash2 size={12} />
-                      </button>
+                      <span style={{ fontFamily: font.ui, fontSize: 12, fontWeight: 500, color: color.textTertiary }}>
+                        {log?.sets.length || 0} series
+                      </span>
+                      <motion.div animate={{ rotate: isActive ? 90 : 0 }} transition={springDefault}>
+                        <ChevronRight size={15} color={color.textTertiary} />
+                      </motion.div>
                     </div>
                   </div>
-                )
-              })}
+
+                  <AnimatePresence initial={false}>
+                    {isActive && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={springDefault}
+                        style={{ overflow: 'hidden' }}>
+                        <div style={{ padding: '0 16px 16px', borderTop: `1px solid ${color.border}` }}>
+                          {log?.sets.map((set, i) => (
+                            <div key={i} style={{
+                              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                              padding: '8px 0', borderBottom: `1px solid ${color.border}`,
+                            }}>
+                              <span style={{ fontFamily: font.ui, fontSize: 12, color: color.textTertiary, fontWeight: 500 }}>
+                                Serie {i + 1}
+                              </span>
+                              <span style={{ fontFamily: font.ui, fontSize: 13.5, color: color.text, fontWeight: 600 }}>
+                                {set.reps} reps · {set.weight} kg
+                              </span>
+                              <IconButton onClick={() => removeSet(ex.id, i)} style={{ padding: 2 }}>
+                                <X size={12} />
+                              </IconButton>
+                            </div>
+                          ))}
+
+                          <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
+                            <Input
+                              type="number"
+                              placeholder="Reps"
+                              value={newSet.reps}
+                              onChange={e => setNewSet(prev => ({ ...prev, reps: e.target.value }))}
+                              style={{ flex: 1, fontSize: 13.5 }}
+                            />
+                            <Input
+                              type="number"
+                              placeholder="Kg"
+                              value={newSet.weight}
+                              onChange={e => setNewSet(prev => ({ ...prev, weight: e.target.value }))}
+                              style={{ flex: 1, fontSize: 13.5 }}
+                            />
+                            <PrimaryButton onClick={() => addSet(ex.id)} style={{ padding: '10px 14px' }}>
+                              <Plus size={14} />
+                            </PrimaryButton>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </Card>
+              )
+            })}
+
+            <PrimaryButton onClick={finishWorkout} style={{ marginTop: '0.5rem', width: '100%' }}>
+              <Check size={16} /> Finalizar entrenamiento
+            </PrimaryButton>
+          </motion.div>
+        )}
+
+        {/* Home view */}
+        {view === 'home' && (
+          <motion.div key="home" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={springDefault}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <ScreenTitle>Rutinas</ScreenTitle>
+              <PrimaryButton onClick={() => setView('createRoutine')} style={{ padding: '9px 16px' }}>
+                <Plus size={16} /> Nueva
+              </PrimaryButton>
             </div>
-          )}
-        </div>
-      ))}
+
+            {myRoutines.length === 0 && (
+              <Card style={{ padding: '3rem 1rem', textAlign: 'center' }}>
+                <div style={{ fontFamily: font.ui, fontSize: 13.5, color: color.textTertiary }}>
+                  No tienes rutinas. Crea una para empezar.
+                </div>
+              </Card>
+            )}
+
+            {myRoutines.map(routine => (
+              <Card key={routine.id} style={{ marginBottom: '1rem', overflow: 'hidden', padding: 0 }}>
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '14px 16px', borderBottom: `1px solid ${color.border}`,
+                }}>
+                  <span style={{ fontFamily: font.ui, fontSize: 18, fontWeight: 800, color: color.text, letterSpacing: -0.3 }}>
+                    {routine.name}
+                  </span>
+                  <IconButton onClick={() => deleteRoutine(routine.id)} style={{ padding: 4 }}>
+                    <Trash2 size={15} />
+                  </IconButton>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(128px, 1fr))', gap: 1, background: color.border }}>
+                  {routine.days.map(day => (
+                    <div key={day.id} style={{ background: color.surfaceElevated, padding: '14px' }}>
+                      <div style={{ fontFamily: font.ui, fontSize: 13.5, fontWeight: 700, color: color.text, marginBottom: 4, letterSpacing: -0.1 }}>
+                        {day.name}
+                      </div>
+                      <div style={{ fontFamily: font.ui, fontSize: 11.5, color: color.textTertiary, marginBottom: 12, fontWeight: 500 }}>
+                        {day.exercises.length} ejercicios
+                      </div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <IconButton
+                          onClick={() => openEditDay(routine, day)}
+                          style={{ background: color.surface, border: `1px solid ${color.border}`, borderRadius: radius.pill, padding: '6px 8px' }}>
+                          <Pencil size={12} />
+                        </IconButton>
+                        <motion.button
+                          onClick={() => startWorkout(routine, day)}
+                          whileTap={{ scale: 0.94 }}
+                          style={{
+                            flex: 1, background: color.accentGradient, border: 'none',
+                            borderRadius: radius.pill, padding: '6px 8px',
+                            cursor: 'pointer', color: '#fff',
+                            fontFamily: font.ui, fontWeight: 700,
+                            fontSize: 11.5, letterSpacing: -0.1,
+                          }}>
+                          Entrenar
+                        </motion.button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Recent logs for this routine */}
+                {myLogs.filter(l => l.routineId === routine.id).length > 0 && (
+                  <div style={{ padding: '12px 16px', borderTop: `1px solid ${color.border}` }}>
+                    <SectionLabel style={{ marginBottom: 8 }}>Últimos entrenamientos</SectionLabel>
+                    {myLogs.filter(l => l.routineId === routine.id).slice(-3).reverse().map(log => {
+                      const day = routine.days.find(d => d.id === log.dayId)
+                      const totalSets = log.exercises.reduce((acc, e) => acc + e.sets.length, 0)
+                      return (
+                        <div key={log.id} style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          fontFamily: font.ui,
+                          fontSize: 12.5, color: color.textSecondary, fontWeight: 500,
+                          marginBottom: 4,
+                        }}>
+                          <span>{day?.name || 'Día'} · {totalSets} series</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span>{new Date(log.date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}</span>
+                            <IconButton
+                              onClick={() => {
+                                setSelectedRoutine(routine)
+                                setSelectedDay(day || null)
+                                setSessionLog(log.exercises)
+                                setActiveExercise(null)
+                                deleteLog(log.id)
+                                setView('workout')
+                              }}
+                              style={{ padding: 3 }}>
+                              <Pencil size={12} />
+                            </IconButton>
+                            <IconButton onClick={() => deleteLog(log.id)} style={{ padding: 3 }}>
+                              <Trash2 size={12} />
+                            </IconButton>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </Card>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
-}
-
-// ─── Shared styles ────────────────────────────────────────
-
-const titleStyle: React.CSSProperties = {
-  fontFamily: "'Rajdhani', sans-serif",
-  fontSize: 22, fontWeight: 700,
-  color: '#cdd0de', letterSpacing: 1,
-  marginBottom: '0.25rem',
-}
-
-const subtitleStyle: React.CSSProperties = {
-  fontFamily: "'Barlow Condensed', sans-serif",
-  fontSize: 12, color: '#3a4058',
-}
-
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontFamily: "'Barlow Condensed', sans-serif",
-  fontSize: 11, letterSpacing: 2,
-  color: '#3a4058', marginBottom: 6,
-}
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  background: '#111520', border: '1px solid #242840',
-  color: '#cdd0de', padding: '10px 12px',
-  borderRadius: 3, fontSize: 14,
-  fontFamily: "'Barlow Condensed', sans-serif",
-  outline: 'none', marginBottom: '0.75rem',
-}
-
-const primaryBtnStyle: React.CSSProperties = {
-  background: '#ff3d4d', border: 'none',
-  borderRadius: 3, padding: '10px 16px',
-  cursor: 'pointer', color: '#fff',
-  fontFamily: "'Barlow Condensed', sans-serif",
-  fontSize: 13, letterSpacing: 1, fontWeight: 700,
-  display: 'flex', alignItems: 'center', gap: 6,
-  marginBottom: '0.75rem',
-}
-
-const iconBtnStyle: React.CSSProperties = {
-  background: 'none', border: 'none',
-  cursor: 'pointer', color: '#3a4058',
-  padding: 0, display: 'flex', alignItems: 'center',
-}
-
-const backBtnStyle: React.CSSProperties = {
-  background: 'none', border: 'none',
-  cursor: 'pointer', color: '#7a8098',
-  fontFamily: "'Barlow Condensed', sans-serif",
-  fontSize: 13, letterSpacing: 1,
-  display: 'flex', alignItems: 'center', gap: 4,
-  marginBottom: '1.25rem', padding: 0,
-}
-
-const pillBtnStyle: React.CSSProperties = {
-  width: 44, height: 44, borderRadius: 3,
-  cursor: 'pointer',
-  fontFamily: "'Rajdhani', sans-serif",
-  fontSize: 18, fontWeight: 700,
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
 }
