@@ -29,6 +29,14 @@ export interface Routine {
   days: WorkoutDay[]
 }
 
+export interface RoutineWeek {
+  id: string
+  profileId: string
+  routineId: string
+  index: number
+  createdAt: string // ISO string
+}
+
 export interface ExerciseLog {
   exerciseId: string
   sets: { reps: number; weight: number }[]
@@ -38,6 +46,7 @@ export interface WorkoutLog {
   id: string
   profileId: string
   routineId: string
+  weekId: string
   dayId: string
   date: string
   exercises: ExerciseLog[]

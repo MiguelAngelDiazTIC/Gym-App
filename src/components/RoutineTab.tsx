@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { Plus, X, Check, Pencil, Trash2, ChevronRight, ChevronLeft } from 'lucide-react'
+import { Plus, X, Check, Pencil, Trash2, ChevronRight, ChevronLeft, CalendarDays } from 'lucide-react'
 import { useLocalStorage } from '../hooks/useStorage'
-import type { Routine, WorkoutDay, Exercise, WorkoutLog, ExerciseLog } from '../types'
+import type { Routine, RoutineWeek, WorkoutDay, Exercise, WorkoutLog, ExerciseLog } from '../types'
 import { color, font, radius, springDefault } from '../styles/theme'
 import { Card, SectionLabel, ScreenTitle } from './ui/Card'
 import { PrimaryButton, IconButton } from './ui/Button'
@@ -12,14 +12,33 @@ interface Props {
   profileId: string
 }
 
-type View = 'home' | 'createRoutine' | 'editDay' | 'workout' | 'logs'
+type View = 'home' | 'createRoutine' | 'editDay' | 'weeks' | 'weekDetail' | 'workout'
+
+function BackButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <motion.button
+      onClick={onClick}
+      whileTap={{ scale: 0.95, x: -2 }}
+      style={{
+        background: 'none', border: 'none',
+        cursor: 'pointer', color: color.textSecondary,
+        fontFamily: font.ui, fontSize: 14, fontWeight: 600,
+        display: 'flex', alignItems: 'center', gap: 2,
+        marginBottom: '1.25rem', padding: 0,
+      }}>
+      <ChevronLeft size={18} /> {children}
+    </motion.button>
+  )
+}
 
 export default function RoutineTab({ profileId }: Props) {
   const [routines, setRoutines] = useLocalStorage<Routine[]>('routines', [])
+  const [weeks, setWeeks] = useLocalStorage<RoutineWeek[]>('routineWeeks', [])
   const [logs, setLogs] = useLocalStorage<WorkoutLog[]>('workoutLogs', [])
 
   const [view, setView] = useState<View>('home')
   const [selectedRoutine, setSelectedRoutine] = useState<Routine | null>(null)
+  const [selectedWeek, setSelectedWeek] = useState<RoutineWeek | null>(null)
   const [selectedDay, setSelectedDay] = useState<WorkoutDay | null>(null)
 
   // Create routine
@@ -36,7 +55,49 @@ export default function RoutineTab({ profileId }: Props) {
   const [newSet, setNewSet] = useState({ reps: '', weight: '' })
 
   const myRoutines = routines.filter(r => r.profileId === profileId)
+  const myWeeks = weeks.filter(w => w.profileId === profileId)
   const myLogs = logs.filter(l => l.profileId === profileId)
+
+  // Migrate legacy logs (no weekId) into an auto-created "Semana 1"
+  useEffect(() => {
+    const orphanLogs = logs.filter(l => !l.weekId)
+    if (orphanLogs.length === 0) return
+
+    setWeeks(prevWeeks => {
+      const newWeeks = [...prevWeeks]
+      const weekByKey = new Map<string, RoutineWeek>()
+
+      orphanLogs.forEach(log => {
+        const key = `${log.profileId}|${log.routineId}`
+        if (weekByKey.has(key)) return
+        let week = newWeeks.find(w => w.profileId === log.profileId && w.routineId === log.routineId && w.index === 1)
+        if (!week) {
+          week = {
+            id: crypto.randomUUID(),
+            profileId: log.profileId,
+            routineId: log.routineId,
+            index: 1,
+            createdAt: log.date,
+          }
+          newWeeks.push(week)
+        }
+        weekByKey.set(key, week)
+      })
+
+      setLogs(prevLogs => prevLogs.map(l => {
+        if (l.weekId) return l
+        const week = weekByKey.get(`${l.profileId}|${l.routineId}`)
+        return week ? { ...l, weekId: week.id } : l
+      }))
+
+      return newWeeks
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  function weeksFor(routineId: string) {
+    return myWeeks.filter(w => w.routineId === routineId).sort((a, b) => a.index - b.index)
+  }
 
   // ─── Create routine ───────────────────────────────────────
 
@@ -65,10 +126,12 @@ export default function RoutineTab({ profileId }: Props) {
 
   function deleteRoutine(id: string) {
     setRoutines(prev => prev.filter(r => r.id !== id))
+    setWeeks(prev => prev.filter(w => w.routineId !== id))
+    setLogs(prev => prev.filter(l => l.routineId !== id))
     if (selectedRoutine?.id === id) setSelectedRoutine(null)
   }
 
-  // ─── Edit day ─────────────────────────────────────────────
+  // ─── Edit day (template) ────────────────────────────────────
 
   function openEditDay(routine: Routine, day: WorkoutDay) {
     setSelectedRoutine(routine)
@@ -122,14 +185,56 @@ export default function RoutineTab({ profileId }: Props) {
     setSelectedDay(updated.days.find(d => d.id === selectedDay.id) || null)
   }
 
+  // ─── Weeks ──────────────────────────────────────────────────
+
+  function openWeeks(routine: Routine) {
+    setSelectedRoutine(routine)
+    setView('weeks')
+  }
+
+  function addWeek() {
+    if (!selectedRoutine) return
+    const existing = weeksFor(selectedRoutine.id)
+    const maxIndex = existing.reduce((m, w) => Math.max(m, w.index), 0)
+    const week: RoutineWeek = {
+      id: crypto.randomUUID(),
+      profileId,
+      routineId: selectedRoutine.id,
+      index: maxIndex + 1,
+      createdAt: new Date().toISOString(),
+    }
+    setWeeks(prev => [...prev, week])
+    setSelectedWeek(week)
+    setView('weekDetail')
+  }
+
+  function openWeek(week: RoutineWeek) {
+    setSelectedWeek(week)
+    setView('weekDetail')
+  }
+
+  function deleteWeek(weekId: string) {
+    setWeeks(prev => prev.filter(w => w.id !== weekId))
+    setLogs(prev => prev.filter(l => l.weekId !== weekId))
+    if (selectedWeek?.id === weekId) setSelectedWeek(null)
+  }
+
   // ─── Workout session ──────────────────────────────────────
 
-  function startWorkout(routine: Routine, day: WorkoutDay) {
-    setSelectedRoutine(routine)
+  function startWorkout(day: WorkoutDay) {
     setSelectedDay(day)
     setSessionLog(day.exercises.map(e => ({ exerciseId: e.id, sets: [] })))
     setActiveExercise(null)
     setView('workout')
+  }
+
+  function getPreviousEntry(dayId: string): { log: WorkoutLog; week: RoutineWeek } | undefined {
+    if (!selectedRoutine || !selectedWeek) return undefined
+    return myLogs
+      .filter(l => l.routineId === selectedRoutine.id && l.dayId === dayId)
+      .map(l => ({ log: l, week: myWeeks.find(w => w.id === l.weekId) }))
+      .filter((x): x is { log: WorkoutLog; week: RoutineWeek } => !!x.week && x.week.index < selectedWeek.index)
+      .sort((a, b) => b.week.index - a.week.index || new Date(b.log.date).getTime() - new Date(a.log.date).getTime())[0]
   }
 
   function addSet(exerciseId: string) {
@@ -153,33 +258,21 @@ export default function RoutineTab({ profileId }: Props) {
   }
 
   function finishWorkout() {
-    if (!selectedRoutine || !selectedDay) return
+    if (!selectedRoutine || !selectedWeek || !selectedDay) return
     const log: WorkoutLog = {
       id: crypto.randomUUID(),
       profileId,
       routineId: selectedRoutine.id,
+      weekId: selectedWeek.id,
       dayId: selectedDay.id,
       date: new Date().toISOString(),
       exercises: sessionLog,
     }
     setLogs(prev => [...prev, log])
-    setView('home')
+    setView('weekDetail')
   }
 
-  const BackButton = ({ onClick, children }: { onClick: () => void; children: React.ReactNode }) => (
-    <motion.button
-      onClick={onClick}
-      whileTap={{ scale: 0.95, x: -2 }}
-      style={{
-        background: 'none', border: 'none',
-        cursor: 'pointer', color: color.textSecondary,
-        fontFamily: font.ui, fontSize: 14, fontWeight: 600,
-        display: 'flex', alignItems: 'center', gap: 2,
-        marginBottom: '1.25rem', padding: 0,
-      }}>
-      <ChevronLeft size={18} /> {children}
-    </motion.button>
-  )
+  const prevEntry = view === 'workout' && selectedDay ? getPreviousEntry(selectedDay.id) : undefined
 
   // ─── Render ───────────────────────────────────────────────
 
@@ -230,7 +323,7 @@ export default function RoutineTab({ profileId }: Props) {
           </motion.div>
         )}
 
-        {/* Edit day view */}
+        {/* Edit day (template) view */}
         {view === 'editDay' && selectedRoutine && selectedDay && (
           <motion.div key="editDay" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={springDefault}>
             <BackButton onClick={() => setView('home')}>Volver</BackButton>
@@ -286,11 +379,143 @@ export default function RoutineTab({ profileId }: Props) {
           </motion.div>
         )}
 
+        {/* Weeks list for a routine template */}
+        {view === 'weeks' && selectedRoutine && (
+          <motion.div key="weeks" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={springDefault}>
+            <BackButton onClick={() => setView('home')}>Volver</BackButton>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <ScreenTitle subtitle={selectedRoutine.name}>Semanas</ScreenTitle>
+              <PrimaryButton onClick={addWeek} style={{ padding: '9px 16px' }}>
+                <Plus size={16} /> Semana
+              </PrimaryButton>
+            </div>
+
+            {weeksFor(selectedRoutine.id).length === 0 && (
+              <Card style={{ padding: '3rem 1rem', textAlign: 'center' }}>
+                <div style={{ fontFamily: font.ui, fontSize: 13.5, color: color.textTertiary }}>
+                  Añade tu primera semana para empezar a entrenar esta rutina
+                </div>
+              </Card>
+            )}
+
+            {weeksFor(selectedRoutine.id).slice().reverse().map(week => {
+              const weekLogs = myLogs.filter(l => l.weekId === week.id)
+              return (
+                <Card key={week.id} onClick={() => openWeek(week)} style={{ marginBottom: '0.75rem', padding: 0, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px' }}>
+                    <div>
+                      <div style={{ fontFamily: font.ui, fontSize: 16, fontWeight: 800, color: color.text, letterSpacing: -0.2 }}>
+                        Semana {week.index}
+                      </div>
+                      <div style={{ fontFamily: font.ui, fontSize: 12, color: color.textTertiary, fontWeight: 500, marginTop: 2 }}>
+                        {weekLogs.length} entrenamiento{weekLogs.length !== 1 ? 's' : ''}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <IconButton onClick={e => { e.stopPropagation(); deleteWeek(week.id) }} style={{ padding: 4 }}>
+                        <Trash2 size={14} />
+                      </IconButton>
+                      <ChevronRight size={16} color={color.textTertiary} />
+                    </div>
+                  </div>
+                </Card>
+              )
+            })}
+          </motion.div>
+        )}
+
+        {/* Week detail: pick a day to train + this week's logs */}
+        {view === 'weekDetail' && selectedRoutine && selectedWeek && (
+          <motion.div key="weekDetail" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={springDefault}>
+            <BackButton onClick={() => setView('weeks')}>Volver</BackButton>
+            <ScreenTitle subtitle={selectedRoutine.name}>Semana {selectedWeek.index}</ScreenTitle>
+            <div style={{ height: 20 }} />
+
+            <Card style={{ padding: 0, overflow: 'hidden', marginBottom: '1.5rem' }}>
+              {selectedRoutine.days.map((day, i, arr) => {
+                const dayLogCount = myLogs.filter(l => l.weekId === selectedWeek.id && l.dayId === day.id).length
+                return (
+                  <div key={day.id} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
+                    padding: '12px 16px',
+                    borderBottom: i < arr.length - 1 ? `1px solid ${color.border}` : 'none',
+                  }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontFamily: font.ui, fontSize: 14.5, fontWeight: 700, color: color.text, letterSpacing: -0.1 }}>
+                        {day.name}
+                      </div>
+                      <div style={{ fontFamily: font.ui, fontSize: 11.5, color: color.textTertiary, marginTop: 2, fontWeight: 500 }}>
+                        {day.exercises.length} ejercicios{dayLogCount > 0 ? ` · ${dayLogCount} hecho${dayLogCount !== 1 ? 's' : ''}` : ''}
+                      </div>
+                    </div>
+                    <motion.button
+                      onClick={() => startWorkout(day)}
+                      whileTap={{ scale: 0.94 }}
+                      style={{
+                        flexShrink: 0, background: color.accentGradient, border: 'none',
+                        borderRadius: radius.pill, padding: '8px 16px',
+                        cursor: 'pointer', color: '#fff',
+                        fontFamily: font.ui, fontWeight: 700,
+                        fontSize: 12.5, letterSpacing: -0.1,
+                      }}>
+                      Entrenar
+                    </motion.button>
+                  </div>
+                )
+              })}
+            </Card>
+
+            {myLogs.filter(l => l.weekId === selectedWeek.id).length > 0 && (
+              <>
+                <SectionLabel style={{ marginBottom: 8 }}>Entrenamientos de esta semana</SectionLabel>
+                <Card style={{ padding: 0, overflow: 'hidden' }}>
+                  {myLogs.filter(l => l.weekId === selectedWeek.id).slice().reverse().map((log, i, arr) => {
+                    const day = selectedRoutine.days.find(d => d.id === log.dayId)
+                    const totalSets = log.exercises.reduce((acc, e) => acc + e.sets.length, 0)
+                    return (
+                      <div key={log.id} style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        padding: '12px 14px',
+                        borderBottom: i < arr.length - 1 ? `1px solid ${color.border}` : 'none',
+                        fontFamily: font.ui,
+                      }}>
+                        <span style={{ fontSize: 13, color: color.textSecondary, fontWeight: 500 }}>
+                          {day?.name || 'Día'} · {totalSets} series
+                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 12, color: color.textTertiary, fontWeight: 500 }}>
+                            {new Date(log.date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}
+                          </span>
+                          <IconButton
+                            onClick={() => {
+                              setSelectedDay(day || null)
+                              setSessionLog(log.exercises)
+                              setActiveExercise(null)
+                              deleteLog(log.id)
+                              setView('workout')
+                            }}
+                            style={{ padding: 3 }}>
+                            <Pencil size={12} />
+                          </IconButton>
+                          <IconButton onClick={() => deleteLog(log.id)} style={{ padding: 3 }}>
+                            <Trash2 size={12} />
+                          </IconButton>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </Card>
+              </>
+            )}
+          </motion.div>
+        )}
+
         {/* Workout session view */}
-        {view === 'workout' && selectedRoutine && selectedDay && (
+        {view === 'workout' && selectedRoutine && selectedWeek && selectedDay && (
           <motion.div key="workout" initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={springDefault}>
-            <BackButton onClick={() => setView('home')}>Cancelar</BackButton>
-            <ScreenTitle subtitle={new Date().toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: 'long' })}>
+            <BackButton onClick={() => setView('weekDetail')}>Cancelar</BackButton>
+            <ScreenTitle subtitle={`Semana ${selectedWeek.index} · ${new Date().toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: 'long' })}`}>
               {selectedDay.name}
             </ScreenTitle>
             <div style={{ height: 20 }} />
@@ -298,6 +523,7 @@ export default function RoutineTab({ profileId }: Props) {
             {selectedDay.exercises.map(ex => {
               const log = sessionLog.find(l => l.exerciseId === ex.id)
               const isActive = activeExercise === ex.id
+              const prevSets = prevEntry?.log.exercises.find(e => e.exerciseId === ex.id)?.sets
               return (
                 <Card key={ex.id} active={isActive} style={{ marginBottom: 8, overflow: 'hidden', padding: 0 }}>
                   <div
@@ -307,10 +533,17 @@ export default function RoutineTab({ profileId }: Props) {
                       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                       cursor: 'pointer',
                     }}>
-                    <span style={{ fontFamily: font.ui, fontSize: 15.5, fontWeight: 700, color: color.text, letterSpacing: -0.2 }}>
-                      {ex.name}
-                    </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <span style={{ fontFamily: font.ui, fontSize: 15.5, fontWeight: 700, color: color.text, letterSpacing: -0.2 }}>
+                        {ex.name}
+                      </span>
+                      {prevSets && prevSets.length > 0 && (
+                        <div style={{ fontFamily: font.ui, fontSize: 12, color: color.textTertiary, fontWeight: 500, marginTop: 3 }}>
+                          Semana {prevEntry!.week.index}: {prevSets.map(s => `${s.weight}kg×${s.reps}`).join(' · ')}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                       <span style={{ fontFamily: font.ui, fontSize: 12, fontWeight: 500, color: color.textTertiary }}>
                         {log?.sets.length || 0} series
                       </span>
@@ -379,7 +612,7 @@ export default function RoutineTab({ profileId }: Props) {
           </motion.div>
         )}
 
-        {/* Home view */}
+        {/* Home view: routine templates */}
         {view === 'home' && (
           <motion.div key="home" initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={springDefault}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
@@ -411,76 +644,46 @@ export default function RoutineTab({ profileId }: Props) {
                   </IconButton>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(128px, 1fr))', gap: 1, background: color.border }}>
-                  {routine.days.map(day => (
-                    <div key={day.id} style={{ background: color.surfaceElevated, padding: '14px' }}>
-                      <div style={{ fontFamily: font.ui, fontSize: 13.5, fontWeight: 700, color: color.text, marginBottom: 4, letterSpacing: -0.1 }}>
-                        {day.name}
+                <div>
+                  {routine.days.map((day, i, arr) => (
+                    <div key={day.id} style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
+                      background: color.surfaceElevated, padding: '12px 16px',
+                      borderBottom: i < arr.length - 1 ? `1px solid ${color.border}` : 'none',
+                    }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontFamily: font.ui, fontSize: 14.5, fontWeight: 700, color: color.text, letterSpacing: -0.1 }}>
+                          {day.name}
+                        </div>
+                        <div style={{ fontFamily: font.ui, fontSize: 11.5, color: color.textTertiary, marginTop: 2, fontWeight: 500 }}>
+                          {day.exercises.length} ejercicios
+                        </div>
                       </div>
-                      <div style={{ fontFamily: font.ui, fontSize: 11.5, color: color.textTertiary, marginBottom: 12, fontWeight: 500 }}>
-                        {day.exercises.length} ejercicios
-                      </div>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <IconButton
-                          onClick={() => openEditDay(routine, day)}
-                          style={{ background: color.surface, border: `1px solid ${color.border}`, borderRadius: radius.pill, padding: '6px 8px' }}>
-                          <Pencil size={12} />
-                        </IconButton>
-                        <motion.button
-                          onClick={() => startWorkout(routine, day)}
-                          whileTap={{ scale: 0.94 }}
-                          style={{
-                            flex: 1, background: color.accentGradient, border: 'none',
-                            borderRadius: radius.pill, padding: '6px 8px',
-                            cursor: 'pointer', color: '#fff',
-                            fontFamily: font.ui, fontWeight: 700,
-                            fontSize: 11.5, letterSpacing: -0.1,
-                          }}>
-                          Entrenar
-                        </motion.button>
-                      </div>
+                      <IconButton
+                        onClick={() => openEditDay(routine, day)}
+                        style={{
+                          flexShrink: 0, background: color.surface, border: `1px solid ${color.border}`,
+                          borderRadius: radius.pill, padding: '6px 12px', gap: 6,
+                        }}>
+                        <Pencil size={12} /> Editar
+                      </IconButton>
                     </div>
                   ))}
                 </div>
 
-                {/* Recent logs for this routine */}
-                {myLogs.filter(l => l.routineId === routine.id).length > 0 && (
-                  <div style={{ padding: '12px 16px', borderTop: `1px solid ${color.border}` }}>
-                    <SectionLabel style={{ marginBottom: 8 }}>Últimos entrenamientos</SectionLabel>
-                    {myLogs.filter(l => l.routineId === routine.id).slice(-3).reverse().map(log => {
-                      const day = routine.days.find(d => d.id === log.dayId)
-                      const totalSets = log.exercises.reduce((acc, e) => acc + e.sets.length, 0)
-                      return (
-                        <div key={log.id} style={{
-                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                          fontFamily: font.ui,
-                          fontSize: 12.5, color: color.textSecondary, fontWeight: 500,
-                          marginBottom: 4,
-                        }}>
-                          <span>{day?.name || 'Día'} · {totalSets} series</span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span>{new Date(log.date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' })}</span>
-                            <IconButton
-                              onClick={() => {
-                                setSelectedRoutine(routine)
-                                setSelectedDay(day || null)
-                                setSessionLog(log.exercises)
-                                setActiveExercise(null)
-                                deleteLog(log.id)
-                                setView('workout')
-                              }}
-                              style={{ padding: 3 }}>
-                              <Pencil size={12} />
-                            </IconButton>
-                            <IconButton onClick={() => deleteLog(log.id)} style={{ padding: 3 }}>
-                              <Trash2 size={12} />
-                            </IconButton>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
+                <div style={{ padding: '12px 16px' }}>
+                  <motion.button
+                    onClick={() => openWeeks(routine)}
+                    whileTap={{ scale: 0.97 }}
+                    style={{
+                      width: '100%', background: color.accentGradient, border: 'none',
+                      borderRadius: radius.md, padding: '10px 14px', cursor: 'pointer',
+                      color: '#fff', fontFamily: font.ui, fontWeight: 700, fontSize: 13.5,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    }}>
+                    <CalendarDays size={15} /> Semanas · {weeksFor(routine.id).length}
+                  </motion.button>
+                </div>
               </Card>
             ))}
           </motion.div>
