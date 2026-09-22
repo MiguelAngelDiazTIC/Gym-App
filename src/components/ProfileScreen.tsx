@@ -1,12 +1,13 @@
 import { useState, useRef } from 'react'
-import { motion } from 'motion/react'
-import { Plus, Pencil, Trash2, Check, X, Dumbbell } from 'lucide-react'
+import { motion, AnimatePresence } from 'motion/react'
+import { Plus, Pencil, Check, X, Dumbbell } from 'lucide-react'
 import { useLocalStorage } from '../hooks/useStorage'
 import { generateId } from '../utils/id'
 import type { Profile } from '../types'
 import { color, font, radius, springDefault, springSnappy } from '../styles/theme'
 import { Input } from '../components/ui/Field'
 import { IconButton } from '../components/ui/Button'
+import { ConfirmDeleteButton } from '../components/ui/ConfirmDeleteButton'
 
 interface Props {
   onSelect: (profile: Profile) => void
@@ -17,18 +18,23 @@ export default function ProfileScreen({ onSelect }: Props) {
   const [editing, setEditing] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState('')
+  const [newNameError, setNewNameError] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
   const editFileRef = useRef<HTMLInputElement>(null)
 
   function createProfile() {
-    if (!newName.trim()) return
+    if (!newName.trim()) {
+      setNewNameError('Escribe un nombre')
+      return
+    }
     const profile: Profile = {
       id: generateId(),
       name: newName.trim(),
     }
     setProfiles(prev => [...prev, profile])
     setNewName('')
+    setNewNameError(null)
     setAdding(false)
   }
 
@@ -83,7 +89,7 @@ export default function ProfileScreen({ onSelect }: Props) {
       WebkitOverflowScrolling: 'touch',
       overscrollBehavior: 'contain',
       background: color.bg,
-      backgroundImage: `radial-gradient(circle at 50% 0%, rgba(255,45,85,0.12), transparent 55%)`,
+      backgroundImage: `radial-gradient(circle at 50% 0%, rgba(255,138,61,0.12), transparent 55%)`,
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -100,9 +106,9 @@ export default function ProfileScreen({ onSelect }: Props) {
           background: color.accentGradient,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           marginBottom: '1.1rem',
-          boxShadow: '0 8px 24px -6px rgba(255,45,85,0.5)',
+          boxShadow: '0 8px 24px -6px rgba(255,138,61,0.5)',
         }}>
-          <Dumbbell size={26} color="#fff" strokeWidth={2.3} />
+          <Dumbbell size={26} color={color.accentContrastText} strokeWidth={2.3} />
         </div>
         <h1 style={{
           fontFamily: font.ui,
@@ -122,17 +128,22 @@ export default function ProfileScreen({ onSelect }: Props) {
         maxWidth: 420,
         marginBottom: '2rem',
       }}>
+        <AnimatePresence initial={false}>
         {profiles.map((profile, i) => (
           <motion.div
             key={profile.id}
+            layout
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, transition: springDefault }}
             transition={{ ...springDefault, delay: i * 0.04 }}
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
 
             {editing === profile.id ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                <div
+                <button
+                  type="button"
+                  aria-label="Cambiar foto"
                   onClick={() => editFileRef.current?.click()}
                   style={{
                     width: 84, height: 84, borderRadius: radius.lg,
@@ -141,11 +152,12 @@ export default function ProfileScreen({ onSelect }: Props) {
                     overflow: 'hidden', cursor: 'pointer', touchAction: 'manipulation',
                     userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: 0,
                   }}>
                   {profile.photo
-                    ? <img src={profile.photo} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ? <img src={profile.photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : <span style={{ color: color.textTertiary, fontSize: 12, fontFamily: font.ui }}>Foto</span>}
-                </div>
+                </button>
                 <input ref={editFileRef} type="file" accept="image/*" style={{ display: 'none' }}
                   onChange={e => e.target.files?.[0] && handlePhoto(profile.id, e.target.files[0])} />
                 <Input
@@ -156,17 +168,19 @@ export default function ProfileScreen({ onSelect }: Props) {
                   style={{ width: 96, textAlign: 'center', padding: '6px 8px' }}
                 />
                 <div style={{ display: 'flex', gap: 6 }}>
-                  <IconButton onClick={() => saveEdit(profile.id)} style={{ color: color.success }}>
+                  <IconButton onClick={() => saveEdit(profile.id)} label="Guardar nombre" style={{ color: color.success }}>
                     <Check size={16} />
                   </IconButton>
-                  <IconButton onClick={() => setEditing(null)} style={{ color: color.accent }}>
+                  <IconButton onClick={() => setEditing(null)} label="Cancelar edición" style={{ color: color.accent }}>
                     <X size={16} />
                   </IconButton>
                 </div>
               </div>
             ) : (
               <>
-                <motion.div
+                <motion.button
+                  type="button"
+                  aria-label={`Entrar como ${profile.name}`}
                   onClick={() => onSelect(profile)}
                   whileTap={{ scale: 0.94 }}
                   transition={springSnappy}
@@ -177,35 +191,41 @@ export default function ProfileScreen({ onSelect }: Props) {
                     overflow: 'hidden', cursor: 'pointer', touchAction: 'manipulation',
                     userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: 0,
                   }}>
                   {profile.photo
-                    ? <img src={profile.photo} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ? <img src={profile.photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : <span style={{
                         fontFamily: font.ui,
                         fontSize: 26, fontWeight: 800,
                         color: color.text,
                       }}>{profile.name[0].toUpperCase()}</span>}
-                </motion.div>
+                </motion.button>
                 <span style={{
                   fontFamily: font.ui,
                   fontSize: 13.5, fontWeight: 600, color: color.textSecondary, letterSpacing: -0.1,
                 }}>{profile.name}</span>
                 <div style={{ display: 'flex', gap: 4 }}>
-                  <IconButton onClick={() => startEdit(profile)} style={{ padding: 4 }}>
+                  <IconButton onClick={() => startEdit(profile)} label={`Editar ${profile.name}`} style={{ padding: 4 }}>
                     <Pencil size={13} />
                   </IconButton>
-                  <IconButton onClick={() => deleteProfile(profile.id)} style={{ padding: 4 }}>
-                    <Trash2 size={13} />
-                  </IconButton>
+                  <ConfirmDeleteButton
+                    onConfirm={() => deleteProfile(profile.id)}
+                    label={`el perfil de ${profile.name} y todo su historial`}
+                    size={13}
+                  />
                 </div>
               </>
             )}
           </motion.div>
         ))}
+        </AnimatePresence>
 
         {profiles.length < 5 && !adding && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-            <motion.div
+            <motion.button
+              type="button"
+              aria-label="Añadir perfil"
               onClick={() => setAdding(true)}
               whileTap={{ scale: 0.94 }}
               transition={springSnappy}
@@ -216,9 +236,10 @@ export default function ProfileScreen({ onSelect }: Props) {
                 cursor: 'pointer', touchAction: 'manipulation',
                 userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: 0,
               }}>
               <Plus size={24} color={color.textTertiary} />
-            </motion.div>
+            </motion.button>
             <span style={{
               fontFamily: font.ui,
               fontSize: 13.5, fontWeight: 500, color: color.textTertiary,
@@ -232,7 +253,9 @@ export default function ProfileScreen({ onSelect }: Props) {
             animate={{ opacity: 1, scale: 1 }}
             transition={springDefault}
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-            <div
+            <button
+              type="button"
+              aria-label="Añadir foto"
               onClick={() => fileRef.current?.click()}
               style={{
                 width: 84, height: 84, borderRadius: radius.lg,
@@ -240,24 +263,33 @@ export default function ProfileScreen({ onSelect }: Props) {
                 cursor: 'pointer', touchAction: 'manipulation',
                 userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: 0,
               }}>
               <span style={{ color: color.textTertiary, fontSize: 12, fontFamily: font.ui }}>+ Foto</span>
-            </div>
+            </button>
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
               onChange={e => e.target.files?.[0] && handleNewPhoto(e.target.files[0])} />
             <Input
               value={newName}
-              onChange={e => setNewName(e.target.value)}
+              onChange={e => { setNewName(e.target.value); setNewNameError(null) }}
               onKeyDown={e => e.key === 'Enter' && createProfile()}
               placeholder="Nombre"
               autoFocus
-              style={{ width: 96, textAlign: 'center', padding: '6px 8px' }}
+              style={{
+                width: 96, textAlign: 'center', padding: '6px 8px',
+                boxShadow: newNameError ? `0 0 0 2px ${color.accent}` : undefined,
+              }}
             />
+            {newNameError && (
+              <div style={{ fontFamily: font.ui, fontSize: 11.5, fontWeight: 600, color: color.accent }}>
+                {newNameError}
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 6 }}>
-              <IconButton onClick={createProfile} style={{ color: color.success }}>
+              <IconButton onClick={createProfile} label="Crear perfil" style={{ color: color.success }}>
                 <Check size={16} />
               </IconButton>
-              <IconButton onClick={() => { setAdding(false); setNewName('') }} style={{ color: color.accent }}>
+              <IconButton onClick={() => { setAdding(false); setNewName(''); setNewNameError(null) }} label="Cancelar" style={{ color: color.accent }}>
                 <X size={16} />
               </IconButton>
             </div>

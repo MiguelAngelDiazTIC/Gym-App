@@ -19,7 +19,9 @@ const base: CSSProperties = {
   fontWeight: 600,
   cursor: 'pointer',
   border: 'none',
-  outline: 'none',
+  // No outline:none here — index.css's :focus-visible rule supplies the
+  // branded focus ring; suppressing it per-component would silently break
+  // keyboard navigation on every button in the app.
   WebkitTapHighlightColor: 'transparent',
 }
 
@@ -34,13 +36,13 @@ export function PrimaryButton({ onClick, children, style, disabled, type = 'butt
       style={{
         ...base,
         background: color.accentGradient,
-        color: '#fff',
+        color: color.accentContrastText,
         borderRadius: radius.pill,
         padding: '11px 20px',
         fontSize: 14.5,
         letterSpacing: -0.1,
         opacity: disabled ? 0.5 : 1,
-        boxShadow: '0 4px 14px -4px rgba(255,45,85,0.5)',
+        boxShadow: '0 4px 14px -4px rgba(255,138,61,0.5)',
         ...style,
       }}>
       {children}
@@ -60,7 +62,6 @@ export function SecondaryButton({ onClick, children, style, disabled, type = 'bu
         ...base,
         background: color.surface,
         color: color.textSecondary,
-        border: `1px solid ${color.border}`,
         borderRadius: radius.pill,
         padding: '10px 18px',
         fontSize: 14.5,
@@ -73,10 +74,11 @@ export function SecondaryButton({ onClick, children, style, disabled, type = 'bu
   )
 }
 
-export function IconButton({ onClick, children, style, disabled }: BaseProps) {
+export function IconButton({ onClick, children, style, disabled, label }: BaseProps & { label: string }) {
   return (
     <motion.button
       type="button"
+      aria-label={label}
       onClick={onClick}
       disabled={disabled}
       whileTap={{ scale: 0.85 }}
@@ -84,7 +86,9 @@ export function IconButton({ onClick, children, style, disabled }: BaseProps) {
       style={{
         ...base,
         background: 'none',
-        color: color.textTertiary,
+        // textSecondary (~7:1 on the app background) rather than textTertiary
+        // (~2.8:1) — icon-only controls have no text fallback for contrast.
+        color: color.textSecondary,
         padding: 6,
         borderRadius: radius.sm,
         ...style,
@@ -105,7 +109,6 @@ export function ChipButton({ onClick, children, active, style }: BaseProps & { a
         ...base,
         background: active ? color.text : color.surface,
         color: active ? '#0a0a0d' : color.textSecondary,
-        border: `1px solid ${active ? color.text : color.border}`,
         borderRadius: radius.pill,
         padding: '6px 14px',
         fontSize: 13,

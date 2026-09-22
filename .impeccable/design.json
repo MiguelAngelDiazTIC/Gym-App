@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-22T00:00:00.000Z",
+  "title": "Design System: Gym-App",
+  "extensions": {
+    "colorMeta": {
+      "void-black": { "role": "neutral", "displayName": "Void Black", "canonical": "#08080c", "tonalRamp": ["#050507", "#08080c", "#0e0e13", "#18181f", "#2a2a33", "#57575f", "#98989f", "#f5f5f7"] },
+      "glass-surface": { "role": "neutral", "displayName": "Glass Surface", "canonical": "rgba(255,255,255,0.06)", "tonalRamp": ["rgba(255,255,255,0.02)", "rgba(255,255,255,0.04)", "rgba(255,255,255,0.06)", "rgba(255,255,255,0.09)", "rgba(255,255,255,0.14)", "rgba(255,255,255,0.24)", "rgba(255,255,255,0.4)", "rgba(255,255,255,0.6)"] },
+      "ember-coral": { "role": "primary", "displayName": "Ember Coral", "canonical": "#ff3b5c", "tonalRamp": ["#4a0512", "#7a0a1f", "#b0122e", "#e02040", "#ff3b5c", "#ff6b81", "#ff9fae", "#ffd2d9"] },
+      "ember-warm": { "role": "primary", "displayName": "Ember Warm (gradient start)", "canonical": "#ff6b4a", "tonalRamp": ["#4a1a0c", "#7a2c14", "#b0421e", "#e0572e", "#ff6b4a", "#ff8f74", "#ffb6a2", "#ffddd3"] },
+      "ice-blue": { "role": "tertiary", "displayName": "Ice Blue", "canonical": "#64d2ff", "tonalRamp": ["#052a3a", "#0a4a63", "#12708f", "#1f9cbf", "#64d2ff", "#8fdfff", "#bcedff", "#e5f9ff"] },
+      "signal-yellow": { "role": "secondary", "displayName": "Signal Yellow", "canonical": "#ffd60a", "tonalRamp": ["#3a3005", "#63530a", "#8f7712", "#bfa11f", "#ffd60a", "#ffe14f", "#ffec8f", "#fff6c9"] },
+      "success-green": { "role": "secondary", "displayName": "Success Green", "canonical": "#32d74b", "tonalRamp": ["#052f0c", "#0a5215", "#127a22", "#1fa832", "#32d74b", "#6fe387", "#a6f0b6", "#daf8e0"] }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Headline", "purpose": "Per-tab screen title (ScreenTitle) — one per screen, top of content." },
+      "title": { "displayName": "Title", "purpose": "Profile name in the header; card-level titles." },
+      "body": { "displayName": "Body", "purpose": "Buttons and general UI text; inputs use this role at 16px to avoid iOS zoom." },
+      "label": { "displayName": "Label", "purpose": "Section labels, field labels, tab bar captions." }
+    },
+    "shadows": [
+      { "name": "card", "value": "inset 0 1px 0 rgba(255,255,255,0.04), 0 12px 32px -12px rgba(0,0,0,0.55)", "purpose": "Default resting elevation for cards — soft top highlight plus diffuse drop shadow, no border." },
+      { "name": "floating", "value": "inset 0 1px 0 rgba(255,255,255,0.05), 0 20px 48px -16px rgba(0,0,0,0.65)", "purpose": "Bottom sheets and modals — a deeper version of the card recipe." },
+      { "name": "button-primary", "value": "0 4px 14px -4px rgba(255,45,85,0.5)", "purpose": "Coral glow under the primary gradient button." }
+    ],
+    "motion": [
+      { "name": "spring-default", "value": "type: spring, bounce: 0, duration: 0.35", "purpose": "App-wide default transition — critically damped, no overshoot." },
+      { "name": "spring-momentum", "value": "type: spring, bounce: 0.25, duration: 0.45", "purpose": "Reserved for momentum-driven / celebratory moments only." },
+      { "name": "spring-snappy", "value": "type: spring, bounce: 0, duration: 0.22", "purpose": "Tap feedback (whileTap scale-down) on buttons and chips." }
+    ],
+    "breakpoints": [
+      { "name": "shell-max", "value": "480px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main call-to-action — pill shape, warm gradient fill, coral glow shadow.",
+      "html": "<button class=\"ds-btn-primary\">Guardar</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-family: 'Inter', sans-serif; font-weight: 600; font-size: 14.5px; letter-spacing: -0.1px; color: #fff; background: linear-gradient(135deg, #ff6b4a 0%, #ff2d55 100%); border: none; border-radius: 999px; padding: 11px 20px; cursor: pointer; box-shadow: 0 4px 14px -4px rgba(255,45,85,0.5); transition: transform 0.15s; } .ds-btn-primary:active { transform: scale(0.96); }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Low-emphasis action next to a Primary button — glass fill, no shadow.",
+      "html": "<button class=\"ds-btn-secondary\">Cancelar</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-family: 'Inter', sans-serif; font-weight: 600; font-size: 14.5px; letter-spacing: -0.1px; color: #98989f; background: rgba(255,255,255,0.06); border: none; border-radius: 999px; padding: 10px 18px; cursor: pointer; transition: transform 0.15s, background 0.15s; } .ds-btn-secondary:hover { background: rgba(255,255,255,0.09); } .ds-btn-secondary:active { transform: scale(0.96); }"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip-active",
+      "description": "Toggle chip — inverts to solid light fill when active, the one light-on-dark inversion in the system.",
+      "html": "<button class=\"ds-chip ds-chip-active\">7 días</button>",
+      "css": ".ds-chip { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 13px; letter-spacing: -0.1px; border: none; border-radius: 999px; padding: 6px 14px; cursor: pointer; background: rgba(255,255,255,0.06); color: #98989f; transition: transform 0.15s; } .ds-chip:active { transform: scale(0.94); } .ds-chip-active { background: #f5f5f7; color: #0a0a0d; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Base container — translucent glass fill, soft shadow, no border.",
+      "html": "<div class=\"ds-card\">Contenido</div>",
+      "css": ".ds-card { background: rgba(255,255,255,0.06); border-radius: 24px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 12px 32px -12px rgba(0,0,0,0.55); padding: 16px; }"
+    },
+    {
+      "name": "Input Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Text input — glass fill, no border at rest, coral glow ring on focus.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"75.5\" />",
+      "css": ".ds-input { width: 100%; background: rgba(255,255,255,0.06); color: #f5f5f7; padding: 11px 14px; border-radius: 16px; font-size: 16px; font-family: 'Inter', sans-serif; font-weight: 500; letter-spacing: -0.1px; border: none; outline: none; box-shadow: 0 0 0 0px transparent; transition: box-shadow 150ms; } .ds-input:focus { box-shadow: 0 0 0 2px rgba(255,59,92,0.14); }"
+    },
+    {
+      "name": "Bottom Tab Bar Item",
+      "kind": "nav",
+      "refersTo": "nav-tab",
+      "description": "One tab in the fixed bottom navigation — icon + label, active state gets a gradient indicator bar.",
+      "html": "<button class=\"ds-tab ds-tab-active\"><span class=\"ds-tab-indicator\"></span><svg class=\"ds-tab-icon\" width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\"><circle cx=\"12\" cy=\"12\" r=\"9\"/></svg><span class=\"ds-tab-label\">Peso</span></button>",
+      "css": ".ds-tab { position: relative; flex: 1; background: none; border: none; cursor: pointer; padding: 10px 0 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: #57575f; } .ds-tab-active { color: #f5f5f7; } .ds-tab-indicator { position: absolute; top: 0; left: 20%; right: 20%; height: 2px; border-radius: 2px; background: linear-gradient(135deg, #ff6b4a 0%, #ff2d55 100%); } .ds-tab-label { font-family: 'Inter', sans-serif; font-size: 10.5px; font-weight: 600; letter-spacing: -0.1px; }"
+    },
+    {
+      "name": "Floating Action Button",
+      "kind": "button",
+      "refersTo": "fab",
+      "description": "The primary create-new action for a list-home screen, anchored bottom-right above the tab bar (thumb zone), instead of the header.",
+      "html": "<button class=\"ds-fab\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M12 5v14M5 12h14\"/></svg>Añadir</button>",
+      "css": ".ds-fab { position: fixed; bottom: calc(70px + env(safe-area-inset-bottom)); right: max(20px, calc((100vw - 480px) / 2 + 20px)); display: flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #ff6b4a 0%, #ff2d55 100%); border: none; border-radius: 999px; padding: 14px 20px 14px 16px; color: #fff; font-family: 'Inter', sans-serif; font-weight: 700; font-size: 14px; box-shadow: 0 8px 24px -6px rgba(255,45,85,0.55); cursor: pointer; }"
+    },
+    {
+      "name": "Confirm-Delete Control (armed state)",
+      "kind": "custom",
+      "refersTo": "confirm-delete",
+      "description": "The armed state of every destructive delete in the app: a tap on the trigger swaps it for this Cancel/Confirm pair, both with a 44px minimum hit box, auto-disarming after 4s.",
+      "html": "<div class=\"ds-confirm-delete\"><button class=\"ds-confirm-cancel\" aria-label=\"Cancelar eliminar\"><svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M18 6 6 18M6 6l12 12\"/></svg></button><button class=\"ds-confirm-confirm\" aria-label=\"Confirmar eliminar\"><svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6\"/></svg></button></div>",
+      "css": ".ds-confirm-delete { display: flex; align-items: center; gap: 2px; } .ds-confirm-cancel, .ds-confirm-confirm { min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; border: none; border-radius: 999px; cursor: pointer; } .ds-confirm-cancel { background: none; color: #98989f; } .ds-confirm-confirm { background: #ff3b5c; color: #fff; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Midnight Training Console",
+    "overview": "Gym-App reads like a focused instrument, not a lifestyle app: a near-black canvas that gets out of the way, translucent glass panels that layer content without cluttering it, and a single warm accent that appears only where it means something (a primary action, an active tab, a highlighted metric). Nothing is decorative. Every surface exists to get a number logged and get out of the user's way, on a phone, one-handed, mid-workout.\n\nThe one indulgence is motion: cards and sheets settle into place with critically-damped spring physics rather than linear fades, so the app feels alive without feeling loud. There is no hero imagery, no marketing flourish — the personality lives entirely in restraint, materials (glass, blur, soft shadow), and the rare warm gradient.",
+    "keyCharacteristics": [
+      "Near-black canvas (#08080c) with translucent \"glass\" surfaces layered on top, never flat white cards on black.",
+      "One accent — a warm coral-to-red gradient — reserved for primary actions and active states.",
+      "Cards float via soft diffuse shadow, never a hard border.",
+      "Full pill radius on every button and chip; larger surfaces (cards, sheets) step down to 24px/32px corners instead.",
+      "Motion is spring-based and critically damped (no bounce) everywhere except momentum/celebratory moments.",
+      "A single typeface (Inter) carries the whole hierarchy through size and weight alone — no secondary display font."
+    ],
+    "rules": [
+      { "name": "The One Voice Rule", "body": "The ember gradient/coral is the only warm color in the system. It marks exactly one thing per screen — the primary action or the active state — never a decorative fill.", "section": "colors" },
+      { "name": "The No Hard Edge Rule", "body": "Depth comes from shadow and blur, never from a 1px border on a card. Borders/hairlines are reserved for dividers and the dashed \"add\" affordance.", "section": "elevation" },
+      { "name": "The Two-Tap Delete Rule", "body": "Nothing in this app is ever deleted from a single tap. Every destructive action arms on the first tap (ui/ConfirmDeleteButton.tsx) and requires a second, deliberate tap on a distinct control to confirm.", "section": "components" }
+    ],
+    "dos": [
+      "Do reserve the ember gradient/coral for exactly one thing per screen — a primary action or the active state (The One Voice Rule).",
+      "Do convey card edges with the Card shadow (soft inset highlight + diffuse drop shadow); never add a border to a card.",
+      "Do use the critically-damped spring (bounce: 0, duration: 0.35) as the motion default; reserve the slight-bounce spring (0.25) for momentum/celebratory moments only.",
+      "Do keep any text-input font-size at 16px minimum to prevent iOS Safari's zoom-on-focus.",
+      "Do give every button/chip full pill radius regardless of size; step containers down through the fixed sm/md/lg/xl scale instead."
+    ],
+    "donts": [
+      "Don't add a hard 1px border to a card for definition — hairline/hairline-strong are for dividers and the dashed \"add\" tile only.",
+      "Don't use bounce/elastic easing for standard taps or transitions; it's reserved for the rare momentum moment.",
+      "Don't introduce a second accent hue — protein intentionally reuses the primary accent color rather than getting its own.",
+      "Don't nest a second scroll container inside the content region; the header and tab bar are fixed/sticky specifically so there is exactly one scrollable area."
+    ]
+  }
+}

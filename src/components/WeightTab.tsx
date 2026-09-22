@@ -1,14 +1,17 @@
 import { useState } from 'react'
-import { Plus, X, Check, Trash2, TrendingDown, TrendingUp, Minus } from 'lucide-react'
+import { motion, AnimatePresence } from 'motion/react'
+import { Plus, X, Check, TrendingDown, TrendingUp, Minus } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
 import { useLocalStorage } from '../hooks/useStorage'
 import { generateId } from '../utils/id'
 import type { WeightEntry } from '../types'
-import { color, font, radius } from '../styles/theme'
+import { color, font, radius, springDefault } from '../styles/theme'
 import { Card, SectionLabel, ScreenTitle } from './ui/Card'
-import { PrimaryButton, SecondaryButton, ChipButton, IconButton } from './ui/Button'
+import { PrimaryButton, SecondaryButton, ChipButton } from './ui/Button'
 import { Input } from './ui/Field'
 import { Modal } from './ui/Modal'
+import { ConfirmDeleteButton } from './ui/ConfirmDeleteButton'
+import { Fab } from './ui/Fab'
 
 interface Props {
   profileId: string
@@ -21,6 +24,7 @@ export default function WeightTab({ profileId }: Props) {
   const [entries, setEntries] = useLocalStorage<WeightEntry[]>('weights', [])
   const [showModal, setShowModal] = useState(false)
   const [weightInput, setWeightInput] = useState('')
+  const [weightError, setWeightError] = useState<string | null>(null)
   const [range, setRange] = useState<Range>('week')
   const [chartType, setChartType] = useState<ChartType>('line')
 
@@ -28,7 +32,10 @@ export default function WeightTab({ profileId }: Props) {
 
   function addEntry() {
     const val = parseFloat(weightInput)
-    if (isNaN(val) || val <= 0) return
+    if (isNaN(val) || val <= 0) {
+      setWeightError('Introduce un peso válido')
+      return
+    }
     const entry: WeightEntry = {
       id: generateId(),
       profileId,
@@ -37,6 +44,7 @@ export default function WeightTab({ profileId }: Props) {
     }
     setEntries(prev => [...prev, entry])
     setWeightInput('')
+    setWeightError(null)
     setShowModal(false)
   }
 
@@ -80,15 +88,14 @@ export default function WeightTab({ profileId }: Props) {
     <div style={{ padding: '1.25rem' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+      <div style={{ marginBottom: '1.5rem' }}>
         <ScreenTitle subtitle={latest ? <>Último registro: <span style={{ color: color.text, fontWeight: 600 }}>{latest.weight} kg</span></> : undefined}>
           Peso
         </ScreenTitle>
-        <PrimaryButton onClick={() => setShowModal(true)} style={{ padding: '9px 16px' }}>
-          <Plus size={16} />
-          Añadir
-        </PrimaryButton>
       </div>
+
+      {/* Bottom-anchored: the highest-frequency action on a one-handed, mid-workout screen belongs in the thumb zone, not the header. */}
+      <Fab onClick={() => setShowModal(true)} label="Añadir" icon={<Plus size={18} />} />
 
       {/* Stats */}
       {diff !== null && (
@@ -184,40 +191,51 @@ export default function WeightTab({ profileId }: Props) {
         <div style={{ marginTop: '1.5rem' }}>
           <SectionLabel style={{ marginBottom: 8, paddingLeft: 4 }}>Historial</SectionLabel>
           <Card style={{ overflow: 'hidden', padding: 0 }}>
-            {[...myEntries].reverse().slice(0, 10).map((e, i, arr) => (
-              <div key={e.id} style={{
-                display: 'flex', justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '12px 14px',
-                borderBottom: i < arr.length - 1 ? `1px solid ${color.border}` : 'none',
-              }}>
-                <span style={{
-                  fontFamily: font.ui,
-                  fontSize: 13, fontWeight: 500, color: color.textSecondary,
-                }}>
-                  {new Date(e.date).toLocaleDateString('es-ES', {
-                    weekday: 'short', day: '2-digit', month: '2-digit',
-                  })} · {new Date(e.date).toLocaleTimeString('es-ES', {
-                    hour: '2-digit', minute: '2-digit',
-                  })}
-                </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <AnimatePresence initial={false}>
+              {[...myEntries].reverse().slice(0, 10).map((e, i, arr) => (
+                <motion.div
+                  key={e.id}
+                  layout
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0, height: 0, paddingTop: 0, paddingBottom: 0 }}
+                  transition={springDefault}
+                  style={{
+                    display: 'flex', justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '12px 14px', overflow: 'hidden',
+                    borderBottom: i < arr.length - 1 ? `1px solid ${color.border}` : 'none',
+                  }}>
                   <span style={{
                     fontFamily: font.ui,
-                    fontSize: 16, fontWeight: 700, color: color.text, letterSpacing: -0.3,
-                  }}>{e.weight} kg</span>
-                  <IconButton onClick={() => setEntries(prev => prev.filter(w => w.id !== e.id))} style={{ padding: 4 }}>
-                    <Trash2 size={13} />
-                  </IconButton>
-                </div>
-              </div>
-            ))}
+                    fontSize: 13, fontWeight: 500, color: color.textSecondary,
+                  }}>
+                    {new Date(e.date).toLocaleDateString('es-ES', {
+                      weekday: 'short', day: '2-digit', month: '2-digit',
+                    })} · {new Date(e.date).toLocaleTimeString('es-ES', {
+                      hour: '2-digit', minute: '2-digit',
+                    })}
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{
+                      fontFamily: font.ui,
+                      fontSize: 16, fontWeight: 700, color: color.text, letterSpacing: -0.3,
+                    }}>{e.weight} kg</span>
+                    <ConfirmDeleteButton
+                      onConfirm={() => setEntries(prev => prev.filter(w => w.id !== e.id))}
+                      label={`el registro de ${e.weight} kg`}
+                      size={13}
+                    />
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </Card>
         </div>
       )}
 
       {/* Modal */}
-      <Modal open={showModal} onClose={() => { setShowModal(false); setWeightInput('') }}>
+      <Modal open={showModal} onClose={() => { setShowModal(false); setWeightInput(''); setWeightError(null) }} label="Añadir peso">
         <div style={{
           fontFamily: font.ui,
           fontSize: 19, fontWeight: 800,
@@ -234,14 +252,14 @@ export default function WeightTab({ profileId }: Props) {
           })}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '1.4rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: weightError ? 6 : '1.4rem' }}>
           <Input
             type="number"
             inputMode="decimal"
             step="0.1"
             placeholder="75.5"
             value={weightInput}
-            onChange={e => setWeightInput(e.target.value)}
+            onChange={e => { setWeightInput(e.target.value); setWeightError(null) }}
             onKeyDown={e => e.key === 'Enter' && addEntry()}
             autoFocus
             style={{
@@ -249,6 +267,7 @@ export default function WeightTab({ profileId }: Props) {
               fontWeight: 800,
               padding: '12px 16px',
               letterSpacing: -0.5,
+              boxShadow: weightError ? `0 0 0 2px ${color.accent}` : undefined,
             }}
           />
           <span style={{
@@ -256,9 +275,14 @@ export default function WeightTab({ profileId }: Props) {
             fontSize: 15, fontWeight: 600, color: color.textSecondary,
           }}>kg</span>
         </div>
+        {weightError && (
+          <div style={{ fontFamily: font.ui, fontSize: 12.5, fontWeight: 600, color: color.accent, marginBottom: '1.1rem' }}>
+            {weightError}
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: 8 }}>
-          <SecondaryButton onClick={() => { setShowModal(false); setWeightInput('') }} style={{ flex: 1 }}>
+          <SecondaryButton onClick={() => { setShowModal(false); setWeightInput(''); setWeightError(null) }} style={{ flex: 1 }}>
             <X size={14} /> Cancelar
           </SecondaryButton>
           <PrimaryButton onClick={addEntry} style={{ flex: 1 }}>

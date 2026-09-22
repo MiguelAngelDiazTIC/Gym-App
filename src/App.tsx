@@ -5,7 +5,7 @@ import ProfileScreen from './components/ProfileScreen'
 import WeightTab from './components/WeightTab'
 import RoutineTab from './components/RoutineTab'
 import NutritionTab from './components/NutritionTab'
-import { color, font, radius, springDefault, springSnappy } from './styles/theme'
+import { color, font, radius, shadow, springDefault, springSnappy } from './styles/theme'
 import { IconButton } from './components/ui/Button'
 
 type Tab = 'weight' | 'routine' | 'nutrition'
@@ -38,30 +38,26 @@ export default function App() {
       position: 'relative',
     }}>
 
-      {/* Header — translucent material, floats above content */}
+      {/* Header — no bar chrome (no background/blur/border): the avatar, name,
+          and logout control just sit directly on the page background. */}
       <div style={{
-        position: 'sticky', top: 0, zIndex: 100,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: 'calc(0.9rem + env(safe-area-inset-top)) 1.25rem 0.9rem',
-        background: 'rgba(8,8,12,0.72)',
-        backdropFilter: 'blur(20px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        borderBottom: `1px solid ${color.border}`,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {activeProfile.photo
             ? <img src={activeProfile.photo} style={{
-                width: 34, height: 34, borderRadius: radius.pill,
+                width: 36, height: 36, borderRadius: radius.pill,
                 objectFit: 'cover', border: `1px solid ${color.borderStrong}`,
               }} />
             : <div style={{
-                width: 34, height: 34, borderRadius: radius.pill,
+                width: 36, height: 36, borderRadius: radius.pill,
                 background: color.accentGradient,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontFamily: font.ui,
-                fontWeight: 700, fontSize: 15, color: '#fff',
+                fontWeight: 700, fontSize: 15, color: color.accentContrastText,
               }}>{activeProfile.name[0].toUpperCase()}</div>
           }
           <span style={{
@@ -73,19 +69,25 @@ export default function App() {
 
         <IconButton
           onClick={() => setActiveProfile(null)}
-          style={{ color: color.textTertiary, fontSize: 12, fontWeight: 600, gap: 5, padding: '6px 8px' }}>
-          <LogOut size={15} />
+          label="Cambiar de perfil">
+          <LogOut size={17} />
         </IconButton>
       </div>
 
-      {/* Content — the only scrollable region; single scroll container avoids iOS chrome jump */}
+      {/* Content — the only scrollable region; single scroll container avoids iOS chrome jump.
+          Must clear the Fab (the taller of the two floating elements), not just
+          the tab bar: Fab bottom-offset 102px + its own ~50px height (28px
+          vertical padding + ~22px icon/label row) = ~152px top edge, +20px
+          margin = 172px. An earlier pass derived this only from the tab bar's
+          height (82px) and never accounted for the Fab's own footprint, which
+          let the Fab's top edge overlap the last scrolled-to card. */}
       <div style={{
         flex: 1,
         minHeight: 0,
         overflowY: 'auto',
         WebkitOverflowScrolling: 'touch',
         overscrollBehavior: 'contain',
-        paddingBottom: 'calc(90px + env(safe-area-inset-bottom))',
+        paddingBottom: 'calc(172px + env(safe-area-inset-bottom))',
       }}>
         <AnimatePresence mode="wait">
           <motion.div
@@ -101,20 +103,32 @@ export default function App() {
         </AnimatePresence>
       </div>
 
-      {/* Bottom tab bar — translucent material, floating indicator */}
+      {/* Bottom tab bar — a floating capsule with margin on every side, icon-only
+          (labels removed for a cleaner look; aria-label keeps them named for
+          screen readers). Same glass-surface material as every card
+          (color.surface), just thinner, plus blur for legibility over
+          scrolling content. Icon slot is 44px — the app's own minimum
+          touch-target size (see ConfirmDeleteButton/IconButton). Box height:
+          12 (pad-top) + 44 (icon slot) + 12 (pad-bottom) = 68px, floating
+          14px above the true bottom edge — content padding and the Fab clear
+          that ~82px footprint with margin. */}
       <div style={{
         position: 'fixed',
-        bottom: 0,
+        bottom: 'calc(14px + env(safe-area-inset-bottom))',
         left: '50%',
         transform: 'translateX(-50%)',
-        width: '100%',
-        maxWidth: 480,
-        background: 'rgba(12,12,17,0.78)',
-        backdropFilter: 'blur(20px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        borderTop: `1px solid ${color.border}`,
+        // No fixed width — the capsule sizes to its content plus side padding.
+        maxWidth: 'calc(min(100vw, 480px) - 40px)',
+        background: color.surface,
+        backdropFilter: 'blur(24px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+        border: `1px solid ${color.border}`,
+        borderRadius: radius.pill,
+        boxShadow: shadow.floating,
         display: 'flex',
-        paddingBottom: 'env(safe-area-inset-bottom)',
+        justifyContent: 'center',
+        padding: '12px 18px',
+        gap: 24,
         zIndex: 100,
       }}>
         {TABS.map(tab => {
@@ -123,43 +137,35 @@ export default function App() {
             <motion.button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              aria-label={tab.label}
+              aria-current={active ? 'page' : undefined}
               whileTap={{ scale: 0.92 }}
               transition={springSnappy}
               style={{
-                flex: 1,
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                padding: '10px 0 8px',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 4,
-                position: 'relative',
+                padding: 0,
+                width: 44, height: 44,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-              {active && (
+              {active ? (
                 <motion.div
-                  layoutId="tab-indicator"
+                  layoutId="tab-pill"
                   transition={springDefault}
                   style={{
-                    position: 'absolute', top: 0, left: '20%', right: '20%', height: 2,
-                    borderRadius: 2,
-                    background: color.accentGradient,
-                  }}
-                />
+                    width: 44, height: 44, borderRadius: radius.pill,
+                    background: color.accent,
+                    boxShadow: '0 8px 20px -6px rgba(255,138,61,0.6)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                  <tab.icon size={21} strokeWidth={2.4} color={color.accentContrastText} />
+                </motion.div>
+              ) : (
+                // textSecondary, not textTertiary — icon-only controls have no
+                // text fallback for contrast (same rule IconButton follows).
+                <tab.icon size={20} strokeWidth={2} color={color.textSecondary} />
               )}
-              <tab.icon
-                size={21}
-                strokeWidth={active ? 2.4 : 2}
-                color={active ? color.text : color.textTertiary}
-              />
-              <span style={{
-                fontFamily: font.ui,
-                fontSize: 10.5,
-                fontWeight: 600,
-                letterSpacing: -0.1,
-                color: active ? color.text : color.textTertiary,
-              }}>{tab.label}</span>
             </motion.button>
           )
         })}

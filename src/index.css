@@ -66,6 +66,20 @@ button {
   font-family: inherit;
 }
 
+/* Branded keyboard-focus ring. Components intentionally ship no outline of
+   their own (see ui/Button.tsx) so this is the single, consistent source of
+   focus visibility for every button and role="button" control in the app. */
+button:focus-visible,
+[role='button']:focus-visible {
+  outline: 2px solid #ff8a3d;
+  outline-offset: 2px;
+  border-radius: 12px; /* DESIGN.md rounded.sm — nearest documented step */
+}
+button:focus:not(:focus-visible),
+[role='button']:focus:not(:focus-visible) {
+  outline: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;

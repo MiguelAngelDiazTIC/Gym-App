@@ -37,9 +37,15 @@ export interface RoutineWeek {
   createdAt: string // ISO string
 }
 
+export interface SetEntry {
+  id?: string // absent on sets created before exit-animation support
+  reps: number
+  weight: number
+}
+
 export interface ExerciseLog {
   exerciseId: string
-  sets: { reps: number; weight: number }[]
+  sets: SetEntry[]
 }
 
 export interface WorkoutLog {
@@ -53,6 +59,7 @@ export interface WorkoutLog {
 }
 
 export interface MacroEntry {
+  id?: string // absent on items created before exit-animation support
   name: string
   kcal: number
   protein: number
